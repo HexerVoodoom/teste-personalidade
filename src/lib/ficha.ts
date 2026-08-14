@@ -1,4 +1,4 @@
-import { buildFicha } from "./classSystem/buildSheet";
+import { buildFicha, FICHA_STAGE_ORDER, FichaStage } from "./classSystem/buildSheet";
 import { capturableCreatures, CapturaAvaliacao } from "./classSystem/capture";
 import { CRIATURAS } from "./classSystem/creatures";
 import { Ficha } from "./classSystem/types";
@@ -8,7 +8,13 @@ import { generateRookieCreature, RookieCreature } from "./creatureGen/rookie";
 import { SoulProfile } from "./profile";
 
 export interface CreatureFicha {
+  /** Alias for `fichaByStage.rookie` — kept for existing callers. */
   ficha: Ficha;
+  /** The same character sheet at every evolution stage, budget scaled up
+   *  per `STAGE_MULTIPLIER` — same points-distribution logic, just more of
+   *  it, so a champion/ultimate/mega/ultra sheet reads as more advanced,
+   *  not just re-flavored. */
+  fichaByStage: Record<FichaStage, Ficha>;
   starterCompanion: CapturaAvaliacao | null;
   bestiaryPick: BestiaryMatch;
   rookie: RookieCreature;
@@ -32,7 +38,10 @@ export function buildCreatureFicha(profile: SoulProfile): CreatureFicha {
     profile.onboarding.placeLabel,
   ].join("|");
 
-  const ficha = buildFicha(profile.onboarding.fullName, profile.oracle);
+  const fichaByStage = Object.fromEntries(
+    FICHA_STAGE_ORDER.map((stage) => [stage, buildFicha(profile.onboarding.fullName, profile.oracle, stage)])
+  ) as Record<FichaStage, Ficha>;
+  const ficha = fichaByStage.rookie;
 
   const catches = capturableCreatures(ficha, CRIATURAS);
   const starterCompanion = catches.length > 0 ? catches[0] : null;
@@ -41,5 +50,5 @@ export function buildCreatureFicha(profile: SoulProfile): CreatureFicha {
   const rookie = generateRookieCreature(profile.oracle, bestiaryPick.creature, seedKey);
   const evolutionChain = buildEvolutionChain(rookie, seedKey);
 
-  return { ficha, starterCompanion, bestiaryPick, rookie, evolutionChain };
+  return { ficha, fichaByStage, starterCompanion, bestiaryPick, rookie, evolutionChain };
 }

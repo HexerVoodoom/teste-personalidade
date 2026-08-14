@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildFicha, ROOKIE_BUDGET } from "./buildSheet";
+import { buildFicha, FICHA_STAGE_ORDER, ROOKIE_BUDGET, STAGE_MULTIPLIER } from "./buildSheet";
 import { generateOracleAxes, OracleInputs } from "../oracle/generate";
 import { avaliarCaptura, capturableCreatures } from "./capture";
 import { CRIATURAS } from "./creatures";
@@ -31,11 +31,29 @@ test("recurso budget goes entirely to the resource matching the dominant role", 
   assert.equal(Object.keys(ficha.recursos).length, 1);
 });
 
-test("exactly two talent ranks are invested, from the mutually-exclusive-safe set", () => {
+test("the full talent budget is spent, never on both sides of the mutually-exclusive pair", () => {
   const ficha = buildFicha("Teste", generateOracleAxes(neutral));
   assert.equal(ficha.totals.talentos, ROOKIE_BUDGET.talentoRanks);
   const talentos = Object.keys(ficha.talentos);
   assert.ok(!(talentos.includes("impacto_imediato") && talentos.includes("dano_ao_longo_do_tempo")));
+});
+
+test("a bigger (higher-stage) talent budget spreads across more than just the 2 role talents", () => {
+  const ficha = buildFicha("Teste", generateOracleAxes(neutral), "ultimate");
+  const talentos = Object.keys(ficha.talentos);
+  assert.ok(talentos.length > 2, `expected more than 2 talents, got ${talentos}`);
+  assert.ok(!(talentos.includes("impacto_imediato") && talentos.includes("dano_ao_longo_do_tempo")));
+});
+
+test("no talent is ranked above its own class-system rank cap", () => {
+  const ficha = buildFicha("Teste", generateOracleAxes(neutral), "ultra");
+  const CAPS: Record<string, number> = {
+    area_ampliada: 5, conjuracao_rapida: 5, alcance_estendido: 5, canalizacao_profunda: 5,
+    economia_de_recurso: 5, persistencia: 3, impacto_imediato: 3, dano_ao_longo_do_tempo: 3,
+  };
+  for (const [id, ranks] of Object.entries(ficha.talentos)) {
+    assert.ok((ranks ?? 0) <= CAPS[id], `${id} has ${ranks} ranks, cap is ${CAPS[id]}`);
+  }
 });
 
 test("no element is stored at zero points", () => {
@@ -105,6 +123,33 @@ test("soullink is reachable for a tanque-dominant profile (it used to collide wi
   assert.equal(axes.dominantRole, "tanque");
   const ficha = buildFicha("Teste", axes);
   assert.equal(Object.keys(ficha.recursos)[0], "soullink");
+});
+
+test("every later evolution stage has a strictly bigger budget than the one before it", () => {
+  const axes = generateOracleAxes(neutral);
+  let prevTotal = 0;
+  for (const stage of FICHA_STAGE_ORDER) {
+    const ficha = buildFicha("Teste", axes, stage);
+    const total =
+      ficha.totals.elementos + ficha.totals.escolas + ficha.totals.recursos + ficha.totals.profissoes;
+    assert.ok(total > prevTotal, `${stage}'s total (${total}) should exceed the previous stage's (${prevTotal})`);
+    prevTotal = total;
+  }
+});
+
+test("elementos/escolas/recursos/profissao budgets are always spent exactly, at every stage", () => {
+  const axes = generateOracleAxes(neutral);
+  for (const stage of FICHA_STAGE_ORDER) {
+    const ficha = buildFicha("Teste", axes, stage);
+    const m = STAGE_MULTIPLIER[stage];
+    assert.equal(ficha.totals.elementos, Math.round(ROOKIE_BUDGET.elementos * m));
+    assert.equal(
+      ficha.totals.escolas,
+      Math.round(ROOKIE_BUDGET.escolasDistribuidas * m) + Math.round(ROOKIE_BUDGET.evocacaoFixo * m)
+    );
+    assert.equal(ficha.totals.recursos, Math.round(ROOKIE_BUDGET.recursos * m));
+    assert.equal(ficha.totals.profissoes, Math.round(ROOKIE_BUDGET.profissao * m));
+  }
 });
 
 test("every escola and every recurso is reachable by some role/alignment profile", () => {

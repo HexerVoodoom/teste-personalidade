@@ -60,6 +60,19 @@ test("a different person (name/birth) can get a different bestiary pick and rook
   assert.equal(same, false);
 });
 
+test("fichaByStage has all 5 evolution stages, budgets growing at each one", () => {
+  const profile = buildSoulProfile(onboarding, fullAnswers(), NOW);
+  const result = buildCreatureFicha(profile);
+  assert.deepEqual(Object.keys(result.fichaByStage), ["rookie", "champion", "ultimate", "mega", "ultra"]);
+  assert.deepEqual(result.ficha, result.fichaByStage.rookie);
+  let prev = 0;
+  for (const stage of ["rookie", "champion", "ultimate", "mega", "ultra"] as const) {
+    const total = result.fichaByStage[stage].totals.elementos;
+    assert.ok(total > prev, `${stage} elementos total (${total}) should exceed the previous stage's (${prev})`);
+    prev = total;
+  }
+});
+
 test("the whole ficha survives JSON serialization", () => {
   const profile = buildSoulProfile(onboarding, fullAnswers(), NOW);
   const ficha = buildCreatureFicha(profile);

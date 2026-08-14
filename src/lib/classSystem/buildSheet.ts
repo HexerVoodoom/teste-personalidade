@@ -5,21 +5,90 @@ import { PROFISSOES } from "./profissoes";
 
 /**
  * class-system has no fixed starting point budget in its source (it's an
- * open-ended point-buy system) — a "rookie" character sheet needed one, so
- * this module defines a documented, deliberately small convention: enough
- * points to have a coherent identity and to legally capture a class-system
- * creature (via `evocacao`), but nowhere near what any talent besides the
- * eight prerequisite-free ones requires. Raise these constants once
- * "evolution" stages exist and a real leveling curve is designed.
+ * open-ended point-buy system) — a character sheet needed one, so this
+ * module defines a documented convention scaled by evolution stage: enough
+ * points at "rookie" to have a coherent identity and legally capture a
+ * class-system creature (via `evocacao`), growing substantially at each
+ * later stage so a champion/ultimate/mega/ultra sheet actually reads as
+ * more advanced, not just re-flavored — deep enough into escolas/recursos
+ * at the top stages to reach the `nivelMinimo: 8`/`10` prerequisite tier
+ * class-system's own talent registry gates behind school/resource depth.
  */
-export const ROOKIE_BUDGET = {
-  elementos: 12,
-  escolasDistribuidas: 6,
-  evocacaoFixo: 2,
-  recursos: 3,
-  talentoRanks: 2,
-  profissao: 2,
-} as const;
+interface Budget {
+  elementos: number;
+  escolasDistribuidas: number;
+  evocacaoFixo: number;
+  recursos: number;
+  talentoRanks: number;
+  profissao: number;
+}
+
+export const ROOKIE_BUDGET: Budget = {
+  elementos: 28,
+  escolasDistribuidas: 14,
+  evocacaoFixo: 4,
+  recursos: 8,
+  talentoRanks: 10,
+  profissao: 6,
+};
+
+export type FichaStage = "rookie" | "champion" | "ultimate" | "mega" | "ultra";
+export const FICHA_STAGE_ORDER: FichaStage[] = ["rookie", "champion", "ultimate", "mega", "ultra"];
+
+/** How much bigger each stage's budget is than rookie's — an accelerating
+ *  curve (each jump is proportionally larger than the last), matching how
+ *  monster-evolution power curves usually read: early growth is steady,
+ *  the last stage is a big leap. */
+export const STAGE_MULTIPLIER: Record<FichaStage, number> = {
+  rookie: 1,
+  champion: 1.8,
+  ultimate: 3,
+  mega: 5,
+  ultra: 8,
+};
+
+/**
+ * Only the 8 prerequisite-free talents are ever pickable by `buildFicha`
+ * (deeper, escola/recurso-gated talents from class-system's full 47-talent
+ * registry aren't modeled here yet), so there's a hard ceiling on how many
+ * ranks can actually be spent: 5 talents at `ranksMaximos: 5` + persistência
+ * at 3 + one side of the impacto_imediato/dano_ao_longo_do_tempo exclusive
+ * pair at 3 = 31. Asking for more than that in the budget would just leave
+ * points nominally "granted" but never actually invested, so it's clamped
+ * here instead of silently under-spending at the top stages.
+ */
+const MAX_SPENDABLE_TALENTO_RANKS = 31;
+
+function budgetForStage(stage: FichaStage): Budget {
+  const m = STAGE_MULTIPLIER[stage];
+  return {
+    elementos: Math.round(ROOKIE_BUDGET.elementos * m),
+    escolasDistribuidas: Math.round(ROOKIE_BUDGET.escolasDistribuidas * m),
+    evocacaoFixo: Math.round(ROOKIE_BUDGET.evocacaoFixo * m),
+    recursos: Math.round(ROOKIE_BUDGET.recursos * m),
+    talentoRanks: Math.min(Math.round(ROOKIE_BUDGET.talentoRanks * m), MAX_SPENDABLE_TALENTO_RANKS),
+    profissao: Math.round(ROOKIE_BUDGET.profissao * m),
+  };
+}
+
+/**
+ * The 8 prerequisite-free talents (`StarterTalentoId`), with class-system's
+ * own `ranksMaximos` cap and `exclusivoCom` mutual-exclusion pairing —
+ * vendorized from `class-system/src/registry/talentos.ts` so a bigger
+ * talent budget can actually be spent (rank up multiple talents, capped
+ * correctly) instead of always landing exactly 1 rank on exactly 2 of them
+ * regardless of how much budget is available.
+ */
+const STARTER_TALENTO_CAPS: Record<StarterTalentoId, { ranksMaximos: number; exclusivoCom?: StarterTalentoId }> = {
+  area_ampliada: { ranksMaximos: 5 },
+  conjuracao_rapida: { ranksMaximos: 5 },
+  alcance_estendido: { ranksMaximos: 5 },
+  canalizacao_profunda: { ranksMaximos: 5 },
+  economia_de_recurso: { ranksMaximos: 5 },
+  persistencia: { ranksMaximos: 3 },
+  impacto_imediato: { ranksMaximos: 3, exclusivoCom: "dano_ao_longo_do_tempo" },
+  dano_ao_longo_do_tempo: { ranksMaximos: 3, exclusivoCom: "impacto_imediato" },
+};
 
 const ROLE_TO_ESCOLA: Record<RoleId, EscolaId> = {
   fisico: "combate_fisico",
@@ -74,13 +143,16 @@ function apportion<K extends string>(shares: Record<K, number>, order: K[], tota
   return out;
 }
 
-/** Builds a rookie-stage `Ficha` from the oracle's axes. Deterministic — the
- *  same profile always yields the same sheet; nothing here is randomized. */
-export function buildFicha(nome: string, oracle: OracleAxes): Ficha {
+/** Builds a `Ficha` at the given evolution stage from the oracle's axes
+ *  (defaults to "rookie"). Deterministic — the same profile+stage always
+ *  yields the same sheet; nothing here is randomized. */
+export function buildFicha(nome: string, oracle: OracleAxes, stage: FichaStage = "rookie"): Ficha {
+  const budget = budgetForStage(stage);
+
   const elementoShares = Object.fromEntries(
     CLASS_ELEMENT_ORDER.map((id) => [id, oracle.classElements[id]])
   ) as Record<ElementoBaseId, number>;
-  const elementos = apportion(elementoShares, ELEMENTO_BASE_ORDER, ROOKIE_BUDGET.elementos);
+  const elementos = apportion(elementoShares, ELEMENTO_BASE_ORDER, budget.elementos);
   // Drop zero-point entries: a `Ficha.elementos[el] = 0` reads as "invested
   // and got nothing", which class-system's own `investirElemento` forbids
   // (it only accepts positive integers).
@@ -108,22 +180,21 @@ export function buildFicha(nome: string, oracle: OracleAxes): Ficha {
     const escola = ROLE_TO_ESCOLA[role];
     if (escola !== "evocacao") roleEscolaShares[escola as keyof typeof roleEscolaShares] += share;
   }
-  const distributedEscolas = apportion(roleEscolaShares, [...DISTRIBUTED_ESCOLAS], ROOKIE_BUDGET.escolasDistribuidas);
-  const escolas: Partial<Record<EscolaId, number>> = { evocacao: ROOKIE_BUDGET.evocacaoFixo };
+  const distributedEscolas = apportion(roleEscolaShares, [...DISTRIBUTED_ESCOLAS], budget.escolasDistribuidas);
+  const escolas: Partial<Record<EscolaId, number>> = { evocacao: budget.evocacaoFixo };
   for (const [escola, pontos] of Object.entries(distributedEscolas)) {
     if (pontos > 0) escolas[escola as EscolaId] = pontos;
   }
 
   const dominantRole = oracle.dominantRole;
   const recursos: Partial<Record<RecursoId, number>> = {
-    [ROLE_TO_RECURSO[dominantRole]]: ROOKIE_BUDGET.recursos,
+    [ROLE_TO_RECURSO[dominantRole]]: budget.recursos,
   };
 
-  const talentos: Partial<Record<StarterTalentoId, number>> = {};
-  for (const t of ROLE_TO_TALENTOS[dominantRole]) talentos[t] = 1;
+  const talentos = allocateTalentos(dominantRole, budget.talentoRanks);
 
   const profissoes: Partial<Record<ProfissaoId, number>> = {
-    [pickProfissao(elementos, escolas)]: ROOKIE_BUDGET.profissao,
+    [pickProfissao(elementos, escolas)]: budget.profissao,
   };
 
   return {
@@ -141,6 +212,42 @@ export function buildFicha(nome: string, oracle: OracleAxes): Ficha {
       profissoes: Object.values(profissoes).reduce((a, b) => a + (b ?? 0), 0),
     },
   };
+}
+
+/**
+ * Spends `budget` ranks across the 8 prerequisite-free talents, instead of
+ * always landing exactly 1 rank on exactly 2 of them regardless of how much
+ * budget is available. The role's own 2 thematic talents (`ROLE_TO_TALENTOS`)
+ * fill first — up to their `ranksMaximos` cap — then any leftover budget
+ * spreads across the rest of the 8, in a fixed deterministic order, always
+ * respecting each talent's own rank cap and skipping the loser of the
+ * impacto_imediato/dano_ao_longo_do_tempo exclusive pair once the winner
+ * (from the role's own picks, or the fixed order as a tie-break) is chosen.
+ */
+function allocateTalentos(dominantRole: RoleId, budget: number): Partial<Record<StarterTalentoId, number>> {
+  const priority: StarterTalentoId[] = [
+    ...ROLE_TO_TALENTOS[dominantRole],
+    ...(Object.keys(STARTER_TALENTO_CAPS) as StarterTalentoId[]).filter(
+      (t) => !ROLE_TO_TALENTOS[dominantRole].includes(t)
+    ),
+  ];
+
+  const talentos: Partial<Record<StarterTalentoId, number>> = {};
+  let excluded: StarterTalentoId | null = null;
+  let remaining = budget;
+
+  for (const id of priority) {
+    if (remaining <= 0) break;
+    if (id === excluded) continue;
+    const cap: { ranksMaximos: number; exclusivoCom?: StarterTalentoId } = STARTER_TALENTO_CAPS[id];
+    const ranks = Math.min(cap.ranksMaximos, remaining);
+    if (ranks <= 0) continue;
+    talentos[id] = ranks;
+    remaining -= ranks;
+    if (cap.exclusivoCom) excluded = cap.exclusivoCom;
+  }
+
+  return talentos;
 }
 
 /**

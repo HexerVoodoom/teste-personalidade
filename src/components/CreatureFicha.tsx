@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { buildCreatureFicha } from "@/lib/ficha";
 import { SoulProfile } from "@/lib/profile";
-import { ROOKIE_BUDGET } from "@/lib/classSystem/buildSheet";
+import { FICHA_STAGE_ORDER, FichaStage } from "@/lib/classSystem/buildSheet";
+
+const FICHA_STAGE_LABELS: Record<FichaStage, string> = {
+  rookie: "Rookie", champion: "Champion", ultimate: "Ultimate", mega: "Mega", ultra: "Ultra",
+};
 
 const ELEMENTO_LABELS: Record<string, string> = {
   fogo: "Fogo", agua: "Água", terra: "Terra", ar: "Ar", eletricidade: "Eletricidade",
@@ -40,6 +44,7 @@ function PointRow({ label, value }: { label: string; value: number }) {
 
 export default function CreatureFicha({ profile }: { profile: SoulProfile }) {
   const [result, setResult] = useState<ReturnType<typeof buildCreatureFicha> | null>(null);
+  const [stage, setStage] = useState<FichaStage>("rookie");
 
   if (!result) {
     return (
@@ -62,19 +67,34 @@ export default function CreatureFicha({ profile }: { profile: SoulProfile }) {
     );
   }
 
-  const { ficha, starterCompanion, bestiaryPick, rookie } = result;
+  const { starterCompanion, bestiaryPick, rookie } = result;
+  const ficha = result.fichaByStage[stage];
 
   return (
     <section className="flex flex-col gap-6">
       <div>
         <h3 className="text-lg font-semibold">Ficha e criatura</h3>
         <p className="text-xs text-neutral-500">
-          Orçamento de personagem rookie (convenção deste projeto — class-system não
-          fixa um orçamento inicial): {ROOKIE_BUDGET.elementos} pts em elementos,{" "}
-          {ROOKIE_BUDGET.escolasDistribuidas + ROOKIE_BUDGET.evocacaoFixo} em escolas,{" "}
-          {ROOKIE_BUDGET.recursos} em recurso, {ROOKIE_BUDGET.talentoRanks} ranks de talento,{" "}
-          {ROOKIE_BUDGET.profissao} em profissão.
+          Orçamento de personagem por estágio (convenção deste projeto — class-system não fixa
+          um orçamento inicial): cresce a cada evolução (rookie → champion → ultimate → mega →
+          ultra), na mesma lógica de distribuição de pontos, só que com mais pontos — um Ultra
+          é uma ficha bem mais avançada que um Rookie, não só re-pintada.
         </p>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {FICHA_STAGE_ORDER.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStage(s)}
+              className={`rounded-lg border px-3 py-1 text-xs font-medium ${
+                s === stage
+                  ? "border-indigo-600 bg-indigo-600 text-white"
+                  : "border-neutral-300 dark:border-neutral-700"
+              }`}
+            >
+              {FICHA_STAGE_LABELS[s]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

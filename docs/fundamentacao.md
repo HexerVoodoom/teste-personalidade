@@ -257,13 +257,25 @@ peças acima a um resultado concreto:
    `oracle`, usando o método do maior resto para que a soma bata exatamente
    com um orçamento. O class-system não define um orçamento inicial fixo (é
    um sistema de compra de pontos em aberto), então este projeto define um
-   **orçamento de rookie** documentado (`ROOKIE_BUDGET`): 12 pts em
-   elementos, 6 pts distribuídos entre escolas + 2 fixos em Evocação (para já
-   poder capturar no primeiro dia), 3 pts no recurso do papel dominante, 2
-   ranks entre os 8 talentos sem pré-requisito, e 2 pts na profissão mais
-   alinhada com os elementos/escolas já investidos. É uma convenção deste
-   projeto, não uma regra do class-system — deve ser revista quando um
-   sistema de evolução/nível real existir.
+   **orçamento por estágio de evolução** documentado (`ROOKIE_BUDGET` +
+   `STAGE_MULTIPLIER`): a ficha rookie começa com 28 pts em elementos, 14 pts
+   distribuídos entre escolas + 4 fixos em Evocação, 8 pts no recurso do
+   papel dominante, 10 ranks de talento, e 6 pts na profissão mais alinhada
+   com os elementos/escolas já investidos — e cada evolução seguinte
+   multiplica esse orçamento (champion ×1,8, ultimate ×3, mega ×5, ultra ×8),
+   usando exatamente a mesma lógica de distribuição, só que com mais pontos.
+   `buildCreatureFicha()` já gera as 5 fichas (`fichaByStage`) de uma vez; a
+   UI deixa trocar entre elas. É uma convenção deste projeto, não uma regra
+   do class-system — deve ser revista quando um sistema de nível real
+   existir.
+
+   O orçamento de talentos tem um teto real: só os 8 talentos sem
+   pré-requisito são elegíveis (o registro completo do class-system tem 47,
+   a maioria gated por nível de escola/recurso — fora de escopo aqui por
+   enquanto), e juntos eles só absorvem até 31 ranks (5 talentos com
+   `ranksMaximos: 5` + 1 com 3 + 1 dos dois mutuamente exclusivos com 3) —
+   então o orçamento de talento é limitado a esse teto nos estágios mega/
+   ultra em vez de pedir mais pontos do que dá pra gastar de verdade.
 
    Todos os campos do class-system são alcançáveis, não só os favorecidos
    pelo mapeamento óbvio "papel → escola/recurso": a escola `maldição` (que
