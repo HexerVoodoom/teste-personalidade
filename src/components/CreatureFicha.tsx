@@ -156,12 +156,71 @@ export default function CreatureFicha({ profile }: { profile: SoulProfile }) {
         </pre>
       </div>
 
+      <EvolutionChainSection chain={result.evolutionChain} />
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setResult(buildCreatureFicha(profile))}
+          className="self-start rounded-lg border border-neutral-300 px-4 py-2 text-sm dark:border-neutral-700"
+        >
+          Gerar de novo (determinístico — deve dar o mesmo resultado)
+        </button>
+      </div>
+    </section>
+  );
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  "champion-virus": "Champion — Vírus (Poder)",
+  "ultimate-virus": "Ultimate — Vírus (Poder)",
+  "mega-virus": "Mega — Vírus (Poder)",
+  "champion-data": "Champion — Data (Harmonia)",
+  "ultimate-data": "Ultimate — Data (Harmonia)",
+  "mega-data": "Mega — Data (Harmonia)",
+  "champion-vaccine": "Champion — Vacina (Benevolência)",
+  "ultimate-vaccine": "Ultimate — Vacina (Benevolência)",
+  "mega-vaccine": "Mega — Vacina (Benevolência)",
+  ultra: "Ultra (fusão das 3 linhas)",
+};
+
+function EvolutionChainSection({
+  chain,
+}: {
+  chain: ReturnType<typeof buildCreatureFicha>["evolutionChain"];
+}) {
+  const [show, setShow] = useState(false);
+  const nextStages = chain.filter((s) => s.stageId !== "rookie");
+
+  return (
+    <div className="flex flex-col gap-2">
       <button
-        onClick={() => setResult(buildCreatureFicha(profile))}
+        onClick={() => setShow(!show)}
         className="self-start rounded-lg border border-neutral-300 px-4 py-2 text-sm dark:border-neutral-700"
       >
-        Gerar de novo (determinístico — deve dar o mesmo resultado)
+        {show ? "Ocultar" : "Mostrar"} prompts das próximas etapas (champion → ultimate → mega → ultra)
       </button>
-    </section>
+      <p className="text-xs text-neutral-500">
+        Só o texto — nenhuma imagem é gerada aqui. Cada prompt assume a imagem
+        do estágio anterior como referência (image-to-image), igual à cadeia
+        do Soulmon (<code>spritePrompts.ts</code>).
+      </p>
+      {show && (
+        <div className="flex flex-col gap-3">
+          {nextStages.map((step) => (
+            <div key={step.stageId} className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-sm font-medium">{STAGE_LABELS[step.stageId] ?? step.stageId}</span>
+                <span className="text-xs text-neutral-400">
+                  ref: {step.referenceStageIds.join(", ") || "—"}
+                </span>
+              </div>
+              <pre className="max-h-32 overflow-auto rounded-lg bg-neutral-900 p-2 text-xs whitespace-pre-wrap text-neutral-100">
+                {step.prompt}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

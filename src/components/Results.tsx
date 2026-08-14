@@ -64,18 +64,40 @@ function NumberCard({ label, result, hint }: { label: string; result: NumberResu
   );
 }
 
-export default function Results({ profile, onRestart }: { profile: SoulProfile; onRestart: () => void }) {
+export default function Results({
+  profile,
+  onRestart,
+  onRandom,
+}: {
+  profile: SoulProfile;
+  onRestart: () => void;
+  /** Debug shortcut: throws away this profile and generates a brand new
+   *  random one, without going back through onboarding. */
+  onRandom?: () => void;
+}) {
   const [showJson, setShowJson] = useState(false);
   const { psychometric, astrology, numerology, oracle, onboarding } = profile;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-10 p-6">
-      <header>
-        <h2 className="text-2xl font-semibold">{onboarding.fullName}</h2>
-        <p className="text-sm text-neutral-500">
-          {new Date(`${onboarding.birthDate}T12:00:00`).toLocaleDateString("pt-BR")}
-          {!onboarding.timeUnknown && ` às ${onboarding.birthTime}`} · {onboarding.placeLabel}
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold">{onboarding.fullName}</h2>
+          <p className="text-sm text-neutral-500">
+            {new Date(`${onboarding.birthDate}T12:00:00`).toLocaleDateString("pt-BR")}
+            {!onboarding.timeUnknown && ` às ${onboarding.birthTime}`} · {onboarding.placeLabel}
+          </p>
+        </div>
+        {onRandom && (
+          <button
+            type="button"
+            onClick={onRandom}
+            title="Debug: descarta este perfil e gera outro totalmente aleatório"
+            className="shrink-0 rounded-lg border border-dashed border-neutral-400 px-3 py-2 text-xs text-neutral-500 hover:border-indigo-500 hover:text-indigo-600 dark:border-neutral-600 dark:hover:text-indigo-400"
+          >
+            🎲 Outro aleatório
+          </button>
+        )}
       </header>
 
       {!psychometric.validity.trustworthy && (

@@ -6,12 +6,15 @@ import { OnboardingData } from "@/lib/profile";
 
 interface Props {
   onSubmit: (data: OnboardingData) => void;
+  /** Debug shortcut: fills onboarding + quiz with random data and jumps
+   *  straight to the results screen. */
+  onRandom?: () => void;
 }
 
 const inputClass =
   "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-indigo-500 dark:border-neutral-700 dark:bg-neutral-900";
 
-export default function Onboarding({ onSubmit }: Props) {
+export default function Onboarding({ onSubmit, onRandom }: Props) {
   const [fullName, setFullName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
@@ -84,12 +87,24 @@ export default function Onboarding({ onSubmit }: Props) {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6 p-6">
-      <div>
-        <h2 className="text-xl font-semibold">Antes de começar</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Esses dados geram o seu mapa astral e o seu mapa numerológico. Tudo é
-          calculado no seu navegador — nada é enviado para nenhum servidor.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">Antes de começar</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Esses dados geram o seu mapa astral e o seu mapa numerológico. Tudo é
+            calculado no seu navegador — nada é enviado para nenhum servidor.
+          </p>
+        </div>
+        {onRandom && (
+          <button
+            type="button"
+            onClick={onRandom}
+            title="Debug: preenche tudo com dados aleatórios e pula direto para o resultado"
+            className="shrink-0 rounded-lg border border-dashed border-neutral-400 px-3 py-2 text-xs text-neutral-500 hover:border-indigo-500 hover:text-indigo-600 dark:border-neutral-600 dark:hover:text-indigo-400"
+          >
+            🎲 Aleatório
+          </button>
+        )}
       </div>
 
       <label className="flex flex-col gap-1">

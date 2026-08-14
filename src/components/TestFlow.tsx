@@ -5,6 +5,7 @@ import Onboarding from "@/components/Onboarding";
 import Quiz from "@/components/Quiz";
 import Results from "@/components/Results";
 import { Answers } from "@/lib/personality/types";
+import { randomAnswers, randomOnboarding } from "@/lib/debug/random";
 import { buildSoulProfile, OnboardingData, SoulProfile } from "@/lib/profile";
 
 type Stage = "onboarding" | "quiz" | "results";
@@ -15,6 +16,15 @@ export default function TestFlow() {
   const [answers, setAnswers] = useState<Answers>({});
   const [profile, setProfile] = useState<SoulProfile | null>(null);
 
+  const goRandom = () => {
+    const data = randomOnboarding();
+    const random = randomAnswers();
+    setOnboarding(data);
+    setAnswers(random);
+    setProfile(buildSoulProfile(data, random));
+    setStage("results");
+  };
+
   if (stage === "onboarding") {
     return (
       <Onboarding
@@ -22,6 +32,7 @@ export default function TestFlow() {
           setOnboarding(data);
           setStage("quiz");
         }}
+        onRandom={goRandom}
       />
     );
   }
@@ -49,6 +60,7 @@ export default function TestFlow() {
           setProfile(null);
           setStage("onboarding");
         }}
+        onRandom={goRandom}
       />
     );
   }

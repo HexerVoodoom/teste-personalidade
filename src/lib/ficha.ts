@@ -3,6 +3,7 @@ import { capturableCreatures, CapturaAvaliacao } from "./classSystem/capture";
 import { CRIATURAS } from "./classSystem/creatures";
 import { Ficha } from "./classSystem/types";
 import { selectBestiaryCreature, BestiaryMatch } from "./bestiary/select";
+import { buildEvolutionChain, EvolutionStep } from "./creatureGen/evolutionChain";
 import { generateRookieCreature, RookieCreature } from "./creatureGen/rookie";
 import { SoulProfile } from "./profile";
 
@@ -11,6 +12,9 @@ export interface CreatureFicha {
   starterCompanion: CapturaAvaliacao | null;
   bestiaryPick: BestiaryMatch;
   rookie: RookieCreature;
+  /** Rookie → champion → ultimate → mega → ultra prompt chain (text only,
+   *  no image is actually generated) — see `evolutionChain.ts`. */
+  evolutionChain: EvolutionStep[];
 }
 
 /**
@@ -35,6 +39,7 @@ export function buildCreatureFicha(profile: SoulProfile): CreatureFicha {
 
   const bestiaryPick = selectBestiaryCreature(profile.oracle, seedKey);
   const rookie = generateRookieCreature(profile.oracle, bestiaryPick.creature, seedKey);
+  const evolutionChain = buildEvolutionChain(rookie, seedKey);
 
-  return { ficha, starterCompanion, bestiaryPick, rookie };
+  return { ficha, starterCompanion, bestiaryPick, rookie, evolutionChain };
 }
