@@ -153,3 +153,14 @@ export const FAMILIA_FEATURES: Record<string, string[]> = {
   geleia: ["a soft translucent gelatinous body", "a wobbly semi-transparent form", "a rounded droplet-like shape"],
   humanoide: ["a small rounded head with simple features", "short stubby limbs", "a compact upright posture"],
 };
+
+/**
+ * Name-ending fragments used to build a rookie's name (see `rookie.ts`) —
+ * generic invented syllables, not a franchise-specific naming convention
+ * (earlier versions of this generator suffixed every name with "-mon",
+ * which is Digimon's own naming rule and not something to reuse here).
+ */
+export const NAME_SUFFIXES: string[] = [
+  "ling", "wyn", "ix", "oth", "ara", "eth", "orin", "yx",
+  "aal", "une", "isk", "orn", "eli", "ux", "ok", "yra",
+];

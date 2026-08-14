@@ -3,7 +3,7 @@ import { OracleAxes } from "../oracle/types";
 import { BestiaryCreature } from "../bestiary/seed";
 import {
   ADJECTIVES_BY_ELEMENT, ADJECTIVES_BY_ROLE, ALIGNMENT_ACCENT, BODY_PLANS,
-  ELEMENT_PALETTES, FAMILIA_FEATURES, LText, NOUNS_BY_ELEMENT, ROOKIE_LOOK,
+  ELEMENT_PALETTES, FAMILIA_FEATURES, LText, NAME_SUFFIXES, NOUNS_BY_ELEMENT, ROOKIE_LOOK,
 } from "./wordbanks";
 
 /**
@@ -94,8 +94,11 @@ export function generateRookieCreature(
   const accent = ALIGNMENT_ACCENT[oracle.dominantAlignment];
   const levelBlock = pick(rng, ROOKIE_LOOK);
 
+  // Name is stem + an invented suffix (never a franchise naming rule like
+  // Digimon's "-mon" — see NAME_SUFFIXES's doc comment).
   const stem = noun.en.replace(/[^a-z]/gi, "").slice(0, 4).toLowerCase();
-  const name = `${stem.charAt(0).toUpperCase()}${stem.slice(1)}mon`;
+  const suffix = pick(rng, NAME_SUFFIXES);
+  const name = `${stem.charAt(0).toUpperCase()}${stem.slice(1)}${suffix}`;
 
   const bio: LText = {
     pt: `${name} nasceu do arquétipo do(a) ${archetype.phrase.pt}, inspirado(a) em ${bestiaryPick.nome} do bestiário. Forma rookie: pequeno(a) e simples, mas já ${adjElement.pt}. Função ${oracle.dominantRole}, alinhamento ${oracle.dominantAlignment}.`,

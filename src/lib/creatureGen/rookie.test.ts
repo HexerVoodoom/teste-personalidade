@@ -3,6 +3,7 @@ import test from "node:test";
 import { generateRookieCreature } from "./rookie";
 import { generateOracleAxes, OracleInputs } from "../oracle/generate";
 import { BESTIARY_SEED } from "../bestiary/seed";
+import { NAME_SUFFIXES } from "./wordbanks";
 
 const neutral: OracleInputs = {
   traits: { openness: 50, conscientiousness: 50, extraversion: 50, agreeableness: 50, neuroticism: 50, honestyHumility: 50 },
@@ -44,10 +45,15 @@ test("bio mentions the bestiary creature used as inspiration", () => {
   assert.ok(rookie.bio.en.includes(BESTIARY_SEED[5].nome));
 });
 
-test("name is a non-empty capitalized word ending in 'mon'", () => {
+test("name is a non-empty capitalized word ending in one of the invented suffixes, never Digimon's '-mon'", () => {
   const axes = generateOracleAxes(neutral);
   const rookie = generateRookieCreature(axes, BESTIARY_SEED[0], "user-a");
-  assert.match(rookie.name, /^[A-Z][a-z]*mon$/);
+  assert.match(rookie.name, /^[A-Z][a-z]*$/);
+  assert.ok(
+    NAME_SUFFIXES.some((s) => rookie.name.toLowerCase().endsWith(s)),
+    `${rookie.name} doesn't end in any of the invented suffixes`
+  );
+  assert.ok(!rookie.name.toLowerCase().endsWith("mon"), "name must not use Digimon's '-mon' naming convention");
 });
 
 test("changing the dominant element changes the archetype noun pool used", () => {
