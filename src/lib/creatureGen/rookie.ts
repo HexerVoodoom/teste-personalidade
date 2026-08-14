@@ -27,6 +27,25 @@ function composeSpritePrompt(args: {
   );
 }
 
+/**
+ * The style-only portion of `composeSpritePrompt`'s contract (same rules,
+ * restated as a standalone sentence instead of interleaved around the
+ * concept) — reused verbatim by `evolutionChain.ts` so every later stage
+ * (champion/ultimate/mega/ultra) states the exact same pixel-art rules the
+ * rookie prompt uses, instead of a different, drifted style description.
+ * Evolution stages chain through image-to-image (`referenceStageIds`), where
+ * a generator following the reference image is especially prone to drifting
+ * away from a style that isn't restated every step.
+ */
+export function styleBlock(colorDesc: string, accent: string): string {
+  return (
+    `Retro virtual-pet sprite, 16x16 pixel art, no background, transparent background. ` +
+    `Flat ${colorDesc} colors with ${accent} accents, no shading, no outlines, no anti-aliasing. ` +
+    `Do not tint the whole creature in a single hue — use clearly distinct colors. ` +
+    `Grayscale/black-and-white is acceptable.`
+  );
+}
+
 export interface RookieCreature {
   name: string;
   archetype: { noun: LText; adjectives: [LText, LText]; phrase: LText };
@@ -36,6 +55,10 @@ export interface RookieCreature {
    *  not a copy, just a seed the prompt nods to (same role `favoriteCreature`
    *  plays in Soulmon's own onboarding). */
   inspiredBy: string;
+  /** This rookie's exact style-block text (`styleBlock()` above) — carried
+   *  forward by `evolutionChain.ts` so every evolution stage keeps the same
+   *  palette/accent identity, not just the same style rules. */
+  styleBlock: string;
 }
 
 /**
@@ -97,5 +120,5 @@ export function generateRookieCreature(
     levelBlock,
   });
 
-  return { name, archetype, bio, imagePrompt, inspiredBy: bestiaryPick.nome };
+  return { name, archetype, bio, imagePrompt, inspiredBy: bestiaryPick.nome, styleBlock: styleBlock(colorDesc, accent) };
 }

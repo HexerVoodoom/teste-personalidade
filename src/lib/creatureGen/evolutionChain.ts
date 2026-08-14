@@ -33,9 +33,22 @@ export const BRANCH_TRAIT_POOL: Record<Branch, string[]> = {
   ],
 };
 
-const STYLE =
-  "minimalist spiritual-digital creature, clean flat shapes, soft gradients, " +
-  "game sprite on transparent background, centered, full body";
+/**
+ * Every non-rookie stage restates the rookie's own pixel-art style block
+ * (not a separate, drifted style description) plus an explicit emphasis
+ * sentence — these stages chain through image-to-image
+ * (`referenceStageIds`), and a generator following a reference image is
+ * especially prone to drifting away from a style that isn't restated on
+ * every single step.
+ */
+function styleReminder(rookie: RookieCreature): string {
+  return (
+    `${rookie.styleBlock} ` +
+    `CRITICAL: this exact pixel-art style must persist unchanged through every evolution stage — ` +
+    `do not shift art style, medium, shading technique, or level of detail, even as the creature ` +
+    `grows larger and more powerful.`
+  );
+}
 
 export interface EvolutionStep {
   stageId: string;
@@ -71,7 +84,7 @@ export function buildEvolutionChain(rookie: RookieCreature, seedKey: string): Ev
       prompt:
         `Evolve the creature in the reference image into its next, more developed form. ` +
         `Keep its visual identity, colors and species traits, but make it visibly stronger, ` +
-        `larger and more mature. Add: ${champTrait}. ${baseDescription}. ${STYLE}`,
+        `larger and more mature. Add: ${champTrait}. ${baseDescription}. ${styleReminder(rookie)}`,
     });
     steps.push({
       stageId: `ultimate-${b}`,
@@ -79,7 +92,7 @@ export function buildEvolutionChain(rookie: RookieCreature, seedKey: string): Ev
       prompt:
         `Evolve the creature in the reference image into its next, clearly superior form. ` +
         `Same identity, but more imposing, more detailed and more powerful than the reference. ` +
-        `Amplify: ${pick(rng, BRANCH_TRAIT_POOL[b])}. ${baseDescription}. ${STYLE}`,
+        `Amplify: ${pick(rng, BRANCH_TRAIT_POOL[b])}. ${baseDescription}. ${styleReminder(rookie)}`,
     });
     steps.push({
       stageId: `mega-${b}`,
@@ -87,7 +100,7 @@ export function buildEvolutionChain(rookie: RookieCreature, seedKey: string): Ev
       prompt:
         `Evolve the creature in the reference image into its final, fully realized mega form. ` +
         `Preserve identity, but push scale, presence and ornamentation to the maximum. ` +
-        `Crown it with: ${pick(rng, BRANCH_TRAIT_POOL[b])}. ${baseDescription}. ${STYLE}`,
+        `Crown it with: ${pick(rng, BRANCH_TRAIT_POOL[b])}. ${baseDescription}. ${styleReminder(rookie)}`,
     });
   }
 
@@ -98,7 +111,7 @@ export function buildEvolutionChain(rookie: RookieCreature, seedKey: string): Ev
       `Fuse the THREE creatures in the reference images into a single transcendent ultra form. ` +
       `The result must clearly combine defining traits of all three references — power, harmony ` +
       `and benevolence united — as an evolved, more developed being beyond any of them. ` +
-      `${baseDescription}. ${STYLE}`,
+      `${baseDescription}. ${styleReminder(rookie)}`,
   });
 
   return steps;

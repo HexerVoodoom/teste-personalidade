@@ -61,3 +61,16 @@ test("every non-rookie stage prompt mentions the rookie's own name, so identity 
     assert.ok(step.prompt.includes(rookie.name), `${step.stageId} prompt is missing ${rookie.name}`);
   }
 });
+
+test("every stage's prompt carries the rookie's exact pixel-art style block, with emphasis on every non-rookie stage", () => {
+  const rookie = rookieFor("a");
+  const chain = buildEvolutionChain(rookie, "a");
+  assert.ok(rookie.imagePrompt.includes("16x16 pixel art"), "sanity: rookie prompt itself is pixel-art");
+  for (const step of chain) {
+    assert.ok(step.prompt.includes("16x16 pixel art"), `${step.stageId} prompt is missing the pixel-art style block`);
+    assert.ok(step.prompt.includes("no shading, no outlines, no anti-aliasing"), `${step.stageId} prompt is missing the style rules`);
+  }
+  for (const step of chain.slice(1)) {
+    assert.match(step.prompt, /CRITICAL:.*pixel-art style must persist/, `${step.stageId} prompt is missing the style-importance emphasis`);
+  }
+});
