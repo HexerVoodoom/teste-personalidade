@@ -3,7 +3,7 @@
 Primeira etapa do projeto Soulmon: o teste que gera o perfil que mais tarde vai
 alimentar o bestiário e o class-system para criar a criatura do usuário.
 
-Gera três camadas a partir de um onboarding curto e de 54 itens:
+Gera três camadas a partir de um onboarding curto e de 20 itens:
 
 - **Perfil psicométrico** — Big Five + Honestidade-Humildade (HEXACO), com
   escores por faceta e índices de validade de resposta.

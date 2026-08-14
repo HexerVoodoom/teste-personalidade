@@ -47,34 +47,44 @@ e separa "ser gentil" (Amabilidade) de "ser íntegro" (Honestidade-Humildade) �
 uma distinção que importa quando a saída alimenta algo parecido com alinhamento
 de criatura.
 
-### Decisões de instrumento
+### Tamanho: 20 itens
 
-Cada uma resolve um problema real de psicometria:
+O teste é curto de propósito (originalmente foi prototipado com 54 itens e 3
+facetas por fator — ainda documentado em `git log` para quem quiser recuperar
+aquele desenho). Cortar para 20 itens tem um custo real e explícito: cada
+fator agora carrega **um único par** de itens (direto + invertido), em vez de
+3 facetas. `TraitScore.facets` retorna 1 entrada por traço, não 3 — a
+granularidade por faceta foi trocada por um teste que as pessoas realmente
+terminam.
 
-1. **Facetas, não só fatores.** Cada fator é medido por 3 facetas estreitas
-   (ex.: Conscienciosidade = organização, persistência, prudência). Duas pessoas
-   com o mesmo escore de fator podem diferir muito nas facetas, e essa variância
-   é justamente o que dá granularidade para distribuir pontos depois.
+O que sobrevive ao corte, e por quê:
 
-2. **Chaveamento balanceado.** Cada faceta tem um item direto e um item
-   invertido. É o controle padrão para o viés de aquiescência: quem concorda com
-   tudo cai perto do meio da escala em vez de estourar todos os traços. Há um
-   teste automatizado que garante esse balanceamento (`scoring.test.ts`).
+1. **Chaveamento balanceado, mesmo curto.** Os 2 itens Likert de cada fator são
+   um direto e um invertido, marcados como par de consistência. É o que torna
+   os índices de aquiescência e inconsistência possíveis mesmo num teste curto
+   — cortar isso teria cortado esses índices também. Teste automatizado
+   garante o balanceamento (`scoring.test.ts`).
 
-3. **Formatos variados.** Concordância Likert, frequência, escolha forçada
-   (ipsativa) e cenários situacionais. A variedade reduz *straight-lining*
-   (responder tudo igual por tédio), e a escolha forçada resiste à
-   desejabilidade social porque as duas opções são igualmente apresentáveis.
+2. **Formatos variados, mantidos.** Concordância Likert, escolha forçada
+   (ipsativa) para os 4 eixos junguianos, e 4 cenários situacionais escolhidos
+   para que a união deles ainda cubra os 6 fatores — os escores de fator não
+   dependem só dos 12 itens Likert.
 
-4. **Ordem intercalada.** Nenhuma sequência tem mais de 3 itens do mesmo
-   formato seguidos — a condição que mais confiavelmente produz resposta
-   descuidada em inventários longos.
+3. **Ordem intercalada.** Nenhuma sequência tem mais de 3 itens do mesmo
+   formato seguidos.
 
-5. **Índices de validade.** Aquiescência, inconsistência (pares de itens que
+4. **Índices de validade.** Aquiescência, inconsistência (pares de itens que
    deveriam concordar após inversão), resposta extrema e resposta no ponto
    médio. Nenhum deles mede personalidade; eles medem se o protocolo pode ser
    lido como um resultado de personalidade. Quando algum estoura, a interface
    avisa antes de mostrar o perfil.
+
+O que se perde: clareza por eixo junguiano. Com 3 itens forçados por eixo, uma
+divisão 2×1 sinalizava "preferência fraca" (`weakAxes`). Com 1 item por eixo,
+não existe voto parcial — o eixo é sempre 100% A ou 100% B, então `weakAxes`
+fica sempre vazio nesta forma curta. O mecanismo continua no código (para
+quando um formulário mais longo voltar a ter múltiplos itens por eixo), só não
+tem o que fazer com apenas 1 item.
 
 ### Tipologia junguiana
 

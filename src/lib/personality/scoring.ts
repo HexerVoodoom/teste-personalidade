@@ -133,9 +133,10 @@ export function scoreProfile(answers: Answers): PersonalityProfile {
     const clarity = Math.round(Math.abs(score - 50) * 2);
     code += pole;
     axes[axis] = { axis, score, pole, clarity };
-    // Each axis is carried by three forced-choice items, so clarity is either
-    // ~34 (a 2-1 split) or 100 (a clean sweep). A 2-1 split is barely better
-    // than a coin flip and must not be presented as a settled preference.
+    // The 20-item short form carries each axis with a single forced-choice
+    // item, so clarity is always 100 here — there's no partial vote to split.
+    // `weakAxes` stays wired up (and threshold kept) for when a longer form
+    // adds more than one item per axis; at this length it will always be empty.
     if (clarity < 50) weakAxes.push(axis);
     traitPoints[`jung_${axis}`] = score;
   }
