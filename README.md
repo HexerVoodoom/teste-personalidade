@@ -19,7 +19,7 @@ Tudo roda no navegador. Nenhum dado sai do dispositivo.
 ```bash
 npm install
 npm run dev     # http://localhost:3000
-npm test        # 63 testes
+npm test        # 96 testes
 npm run build
 ```
 
@@ -47,6 +47,14 @@ da numerologia. Ver [`docs/fundamentacao.md`](docs/fundamentacao.md) para a
 justificativa de cada fórmula e para os achados da leitura dos repositórios do
 Soulmon, do bestiário e do class-system.
 
+Um botão em "Ficha e criatura" liga tudo isso a um resultado concreto e
+testável: `buildCreatureFicha()` monta uma ficha de personagem no vocabulário
+do class-system, avalia se ela consegue capturar uma criatura do bestiário
+próprio do class-system (afinidade elemental + Evocação, fórmula real), escolhe
+uma criatura do bestiário como inspiração (faixa coerente + sorteio
+determinístico), e gera uma criatura **rookie** nova usando o prompt-base real
+do `oracle.ts` do Soulmon (`composeSpritePrompt`) e seus bancos de palavras.
+
 ## Estrutura
 
 ```
@@ -55,7 +63,11 @@ src/lib/astrology/     efemérides, ângulos, casas Placidus, aspectos
 src/lib/numerology/    numerologia pitagórica
 src/lib/onboarding/    tabela de cidades com fuso IANA
 src/lib/oracle/        elemento/papel/alinhamento/reino (vocabulário do Soulmon)
+src/lib/classSystem/   ficha de personagem + captura (vocabulário do class-system)
+src/lib/bestiary/      seed local do besti-rio- + seleção por faixa+aleatoriedade
+src/lib/creatureGen/   gerador de criatura rookie (prompt-base do Soulmon)
 src/lib/profile.ts     junta as três camadas + o oráculo
+src/lib/ficha.ts       pipeline: oráculo → ficha → criatura do bestiário → rookie
 src/components/        onboarding, quiz, resultados
 ```
 

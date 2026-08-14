@@ -8,6 +8,7 @@ import { NumberResult } from "@/lib/numerology/numerology";
 import { alignmentLabels, elementLabels, realmLabels, roleLabels } from "@/lib/oracle/labels";
 import { ALIGNMENT_ORDER, ELEMENT_ORDER, REALM_ORDER, ROLE_ORDER } from "@/lib/oracle/types";
 import { SoulProfile } from "@/lib/profile";
+import CreatureFicha from "@/components/CreatureFicha";
 
 function Bar({ label, score, low, high }: { label: string; score: number; low: string; high: string }) {
   return (
@@ -363,6 +364,8 @@ export default function Results({ profile, onRestart }: { profile: SoulProfile; 
           </div>
         </div>
       </Section>
+
+      <CreatureFicha profile={profile} />
 
       <Section title="Exportar" subtitle="Este JSON é o contrato de entrada para o bestiário e o class-system.">
         <button

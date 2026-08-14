@@ -236,3 +236,56 @@ que já existe em pelo menos um dos repos do Soulmon.
 - Nada aqui serve para uso clínico, diagnóstico ou decisão de seleção.
 - Astrologia e numerologia não têm validade preditiva. Estão aqui por serem
   geradores simbólicos ricos e determinísticos, e o código as pesa de acordo.
+
+## 5. Pipeline completo de teste: onboarding → ficha → criatura (`src/lib/ficha.ts`)
+
+Para poder testar o oráculo de ponta a ponta, `buildCreatureFicha()` liga as
+peças acima a um resultado concreto:
+
+1. **Ficha de personagem** (`src/lib/classSystem/`): `buildFicha()` distribui
+   pontos em elementos/escolas/recurso/talentos a partir de `oracle`, usando
+   o método do maior resto para que a soma bata exatamente com um orçamento.
+   O class-system não define um orçamento inicial fixo (é um sistema de
+   compra de pontos em aberto), então este projeto define um **orçamento de
+   rookie** documentado (`ROOKIE_BUDGET`): 12 pts em elementos, 6 pts
+   distribuídos entre escolas + 2 fixos em Evocação (para já poder capturar
+   no primeiro dia), 3 pts no recurso do papel dominante, e 2 ranks entre os
+   8 talentos sem pré-requisito. É uma convenção deste projeto, não uma regra
+   do class-system — deve ser revista quando um sistema de evolução/nível
+   real existir.
+2. **Companheiro inicial**: a fórmula real de captura do class-system
+   (`poderCaptura`/`avaliarCaptura`, copiada de `evocacao.ts`) roda contra o
+   registro próprio de 26 criaturas do class-system (`criaturas.ts`, também
+   copiado), então a ficha só "pega" uma criatura se realmente tiver afinidade
+   elemental e pontos em Evocação suficientes — é mecânica de verdade, não
+   só flavor.
+3. **Criatura do bestiário**: `selectBestiaryCreature()` pontua um conjunto de
+   candidatas pela combinação de elemento/reino/alinhamento/papel dominantes
+   do oráculo, reduz para a faixa (`range`) de candidatas com pontuação mais
+   próxima do máximo, e faz um sorteio com seed determinística (mesmo
+   algoritmo `hashString`/`mulberry32` do `oracle.ts` do Soulmon) dentro dessa
+   faixa — coerente com as respostas, mas com fator aleatório real. Usa uma
+   cópia local, **corrigida**, do seed de 30 criaturas do `besti-rio-`
+   (`biblioteca_bestiario.json`): a fonte original tem tags claramente erradas
+   (ex.: "Cão" com `Elemental de Fogo`, "Pikachu" com `Planta`) e descrições
+   com ruído de citação de wiki — corrigidas nesta cópia local, mas isso
+   **não substitui** a limpeza real do repositório `besti-rio-`, que tem
+   milhares de criaturas a mais e precisa de sua própria passada.
+4. **Criatura rookie**: `generateRookieCreature()` usa o prompt-base real do
+   Soulmon (`composeSpritePrompt`, copiado verbatim de `oracle.ts`) e os
+   bancos de palavras reais (`NOUNS_BY_ELEMENT`, `ADJECTIVES_BY_ROLE`,
+   `ADJECTIVES_BY_ELEMENT`, `ELEMENT_PALETTES`, `ALIGNMENT_ACCENT`,
+   `ROOKIE_LOOK`), gerando nome, arquétipo, bio PT/EN e prompt de imagem —
+   **só o estágio rookie**, como pedido. A criatura do bestiário entra como
+   inspiração/semente (o mesmo papel que `favoriteCreature` já tem no
+   onboarding do Soulmon), não como cópia. A máquina de família/fusão de
+   ~2000 linhas que gera as 3 linhas de evolução (Vírus/Data/Vacina) do
+   `oracle.ts` original **não foi portada** — fora de escopo para "só
+   rookie".
+
+Tudo é determinístico por usuário (mesma seed = mesmo resultado, seguindo a
+mesma filosofia do `oracle.ts`), verificado com 23 testes novos cobrindo: os
+orçamentos batendo exatamente, a matemática de captura (afinidade E Evocação,
+não uma OU outra), a faixa+aleatoriedade da seleção do bestiário (tendência
+correta, não determinismo absoluto), e o pipeline inteiro sobrevivendo a
+serialização JSON.

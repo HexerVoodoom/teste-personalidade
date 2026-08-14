@@ -1,0 +1,90 @@
+import { hashString, mulberry32, pick } from "../rng";
+import { OracleAxes } from "../oracle/types";
+import { BestiaryCreature } from "../bestiary/seed";
+import {
+  ADJECTIVES_BY_ELEMENT, ADJECTIVES_BY_ROLE, ALIGNMENT_ACCENT,
+  ELEMENT_PALETTES, LText, NOUNS_BY_ELEMENT, ROOKIE_LOOK,
+} from "./wordbanks";
+
+/**
+ * Image-prompt composer, copied verbatim from `soulmon/src/utils/oracle.ts`
+ * (`composeSpritePrompt`). This is the actual "prompt base" the generation
+ * pipeline is built on — reused as-is rather than paraphrased, so a rookie
+ * generated here matches the visual contract Soulmon already uses.
+ */
+function composeSpritePrompt(args: {
+  concept: string; colorDesc: string; accent: string; levelBlock: string; favoriteCreature?: string;
+}): string {
+  const concept = args.favoriteCreature ? `${args.favoriteCreature} ${args.concept}` : args.concept;
+  return (
+    `Generate an original creature for a monster-raising RPG. Do not copy any ` +
+    `existing franchise character. ` +
+    `Retro virtual-pet sprite, 16x16 pixel art, no background, transparent background: ` +
+    `${concept}. ${args.levelBlock}. ` +
+    `Flat ${args.colorDesc} colors with ${args.accent} accents, no shading, no outlines, no anti-aliasing. ` +
+    `Do not tint the whole creature in a single hue — use clearly distinct colors. ` +
+    `Grayscale/black-and-white is acceptable.`
+  );
+}
+
+export interface RookieCreature {
+  name: string;
+  archetype: { noun: LText; adjectives: [LText, LText]; phrase: LText };
+  bio: LText;
+  imagePrompt: string;
+  /** The besti-rio- creature used as species inspiration for this rookie —
+   *  not a copy, just a seed the prompt nods to (same role `favoriteCreature`
+   *  plays in Soulmon's own onboarding). */
+  inspiredBy: string;
+}
+
+/**
+ * Generates a brand-new ROOKIE-stage creature only — Soulmon's full oracle
+ * also produces 3 evolution branches × 3 later stages plus a fusion Ultra,
+ * none of which are built here since only the rookie stage was asked for.
+ * The naming/family/fusion machinery behind those later stages is ~2000
+ * lines in `oracle.ts` and is intentionally not ported; this function reuses
+ * the smaller word banks (`wordbanks.ts`) and the real `composeSpritePrompt`
+ * contract, scoped down to what a rookie needs.
+ */
+export function generateRookieCreature(
+  oracle: OracleAxes,
+  bestiaryPick: BestiaryCreature,
+  seedKey: string
+): RookieCreature {
+  const rng = mulberry32(hashString(`${seedKey}|rookie`));
+
+  const noun = pick(rng, NOUNS_BY_ELEMENT[oracle.dominantElement]);
+  const adjRole = pick(rng, ADJECTIVES_BY_ROLE[oracle.dominantRole]);
+  const adjElement = pick(rng, ADJECTIVES_BY_ELEMENT[oracle.dominantElement]);
+  const archetype = {
+    noun,
+    adjectives: [adjRole, adjElement] as [LText, LText],
+    phrase: {
+      pt: `${noun.pt} ${adjRole.pt} e ${adjElement.pt}`,
+      en: `${adjRole.en} and ${adjElement.en} ${noun.en}`,
+    },
+  };
+
+  const palette = pick(rng, ELEMENT_PALETTES[oracle.dominantElement]);
+  const colorDesc = palette.replace(/\s*color palette\s*$/i, "");
+  const accent = ALIGNMENT_ACCENT[oracle.dominantAlignment];
+  const levelBlock = pick(rng, ROOKIE_LOOK);
+
+  const stem = noun.en.replace(/[^a-z]/gi, "").slice(0, 4).toLowerCase();
+  const name = `${stem.charAt(0).toUpperCase()}${stem.slice(1)}mon`;
+
+  const bio: LText = {
+    pt: `${name} nasceu do arquétipo do(a) ${archetype.phrase.pt}, inspirado(a) em ${bestiaryPick.nome} do bestiário. Forma rookie: pequeno(a) e simples, mas já ${adjElement.pt}. Função ${oracle.dominantRole}, alinhamento ${oracle.dominantAlignment}.`,
+    en: `${name} was born from the archetype of the ${archetype.phrase.en}, inspired by the bestiary's ${bestiaryPick.nome}. Rookie form: small and simple, but already ${adjElement.en}. Role: ${oracle.dominantRole}. Alignment: ${oracle.dominantAlignment}.`,
+  };
+
+  const imagePrompt = composeSpritePrompt({
+    concept: `${noun.en}-like creature, ${archetype.phrase.en}`,
+    colorDesc,
+    accent,
+    levelBlock,
+  });
+
+  return { name, archetype, bio, imagePrompt, inspiredBy: bestiaryPick.nome };
+}

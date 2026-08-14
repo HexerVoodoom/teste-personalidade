@@ -1,0 +1,44 @@
+import { CriaturaDef } from "./types";
+import { Ficha } from "./types";
+
+/**
+ * Capture formula, copied verbatim from
+ * `class-system/src/engine/evocacao.ts` (`poderCaptura`/`avaliarCaptura`),
+ * minus the `instinto_de_caca` talent bonus — that talent has an escola
+ * prerequisite a rookie sheet can't reach, so it's always 0 at this stage.
+ */
+const CAPTURA_BASE = 8;
+const CAPTURA_POR_NIVEL_ELEMENTO = 4;
+const CAPTURA_POR_EVOCACAO = 3;
+
+export function poderCaptura(ficha: Ficha, criatura: CriaturaDef): number {
+  const nivelAfinidade = Math.max(0, ...criatura.afinidades.map((e) => ficha.elementos[e] ?? 0));
+  if (nivelAfinidade <= 0) return 0;
+  const evocacao = ficha.escolas.evocacao ?? 0;
+  return CAPTURA_BASE + CAPTURA_POR_NIVEL_ELEMENTO * nivelAfinidade + CAPTURA_POR_EVOCACAO * evocacao;
+}
+
+export interface CapturaAvaliacao {
+  criatura: CriaturaDef;
+  capturavel: boolean;
+  poder: number;
+}
+
+export function avaliarCaptura(ficha: Ficha, criatura: CriaturaDef): CapturaAvaliacao {
+  if ((ficha.escolas.evocacao ?? 0) <= 0) {
+    return { criatura, capturavel: false, poder: 0 };
+  }
+  const temAfinidade = criatura.afinidades.some((e) => (ficha.elementos[e] ?? 0) > 0);
+  if (!temAfinidade) return { criatura, capturavel: false, poder: 0 };
+  const poder = poderCaptura(ficha, criatura);
+  return { criatura, capturavel: poder >= criatura.poderBase, poder };
+}
+
+/** Every creature the sheet can capture today, sorted by poderBase descending
+ *  (the "best" catch first). */
+export function capturableCreatures(ficha: Ficha, registry: Record<string, CriaturaDef>): CapturaAvaliacao[] {
+  return Object.values(registry)
+    .map((cr) => avaliarCaptura(ficha, cr))
+    .filter((a) => a.capturavel)
+    .sort((a, b) => b.criatura.poderBase - a.criatura.poderBase);
+}
