@@ -253,22 +253,36 @@ Para poder testar o oráculo de ponta a ponta, `buildCreatureFicha()` liga as
 peças acima a um resultado concreto:
 
 1. **Ficha de personagem** (`src/lib/classSystem/`): `buildFicha()` distribui
-   pontos em elementos/escolas/recurso/talentos a partir de `oracle`, usando
-   o método do maior resto para que a soma bata exatamente com um orçamento.
-   O class-system não define um orçamento inicial fixo (é um sistema de
-   compra de pontos em aberto), então este projeto define um **orçamento de
-   rookie** documentado (`ROOKIE_BUDGET`): 12 pts em elementos, 6 pts
-   distribuídos entre escolas + 2 fixos em Evocação (para já poder capturar
-   no primeiro dia), 3 pts no recurso do papel dominante, e 2 ranks entre os
-   8 talentos sem pré-requisito. É uma convenção deste projeto, não uma regra
-   do class-system — deve ser revista quando um sistema de evolução/nível
-   real existir.
+   pontos em elementos/escolas/recurso/talentos/profissão a partir de
+   `oracle`, usando o método do maior resto para que a soma bata exatamente
+   com um orçamento. O class-system não define um orçamento inicial fixo (é
+   um sistema de compra de pontos em aberto), então este projeto define um
+   **orçamento de rookie** documentado (`ROOKIE_BUDGET`): 12 pts em
+   elementos, 6 pts distribuídos entre escolas + 2 fixos em Evocação (para já
+   poder capturar no primeiro dia), 3 pts no recurso do papel dominante, 2
+   ranks entre os 8 talentos sem pré-requisito, e 2 pts na profissão mais
+   alinhada com os elementos/escolas já investidos. É uma convenção deste
+   projeto, não uma regra do class-system — deve ser revista quando um
+   sistema de evolução/nível real existir.
+
+   Todos os campos do class-system são alcançáveis, não só os favorecidos
+   pelo mapeamento óbvio "papel → escola/recurso": a escola `maldição` (que
+   nenhum papel do oráculo aponta diretamente) é alimentada pela fatia do
+   papel `suporte`, dividida entre `bênção`/`maldição` conforme o alinhamento
+   pender para benevolência ou poder; e o recurso `soullink` (que colidiria
+   com `fúria` se físico e tanque apontassem para o mesmo recurso) foi
+   dedicado ao papel `tanque` sozinho. `pickProfissao()` não usa um mapeamento
+   separado "personalidade → profissão" — pontua as 6 profissões pelos pesos
+   de elemento/escola que cada uma já declara no class-system contra o que a
+   ficha já investiu, então a profissão sai interligada com o resto da ficha
+   em vez de ser um sorteio independente.
 2. **Companheiro inicial**: a fórmula real de captura do class-system
    (`poderCaptura`/`avaliarCaptura`, copiada de `evocacao.ts`) roda contra o
-   registro próprio de 26 criaturas do class-system (`criaturas.ts`, também
-   copiado), então a ficha só "pega" uma criatura se realmente tiver afinidade
-   elemental e pontos em Evocação suficientes — é mecânica de verdade, não
-   só flavor.
+   registro próprio de 34 criaturas do class-system (`criaturas.ts`, também
+   copiado — inclui as 3 famílias `gigante`/`geleia`/`humanoide` adicionadas
+   ao registro do class-system, cada uma com 2 criaturas capturáveis), então a
+   ficha só "pega" uma criatura se realmente tiver afinidade elemental e
+   pontos em Evocação suficientes — é mecânica de verdade, não só flavor.
 3. **Criatura do bestiário**: `selectBestiaryCreature()` pontua um conjunto de
    candidatas pela combinação de elemento/reino/alinhamento/papel dominantes
    do oráculo, reduz para a faixa (`range`) de candidatas com pontuação mais

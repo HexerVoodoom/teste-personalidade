@@ -24,6 +24,10 @@ const TALENTO_LABELS: Record<string, string> = {
   economia_de_recurso: "Economia de Recurso", persistencia: "Persistência",
   impacto_imediato: "Impacto Imediato", dano_ao_longo_do_tempo: "Dano ao Longo do Tempo",
 };
+const PROFISSAO_LABELS: Record<string, string> = {
+  ferreiro: "Ferreiro", tecelao: "Tecelão", artesao: "Artesão",
+  joalheiro: "Joalheiro", alquimista: "Alquimista", curtidor: "Curtidor",
+};
 
 function PointRow({ label, value }: { label: string; value: number }) {
   return (
@@ -68,7 +72,8 @@ export default function CreatureFicha({ profile }: { profile: SoulProfile }) {
           Orçamento de personagem rookie (convenção deste projeto — class-system não
           fixa um orçamento inicial): {ROOKIE_BUDGET.elementos} pts em elementos,{" "}
           {ROOKIE_BUDGET.escolasDistribuidas + ROOKIE_BUDGET.evocacaoFixo} em escolas,{" "}
-          {ROOKIE_BUDGET.recursos} em recurso, {ROOKIE_BUDGET.talentoRanks} ranks de talento.
+          {ROOKIE_BUDGET.recursos} em recurso, {ROOKIE_BUDGET.talentoRanks} ranks de talento,{" "}
+          {ROOKIE_BUDGET.profissao} em profissão.
         </p>
       </div>
 
@@ -104,6 +109,12 @@ export default function CreatureFicha({ profile }: { profile: SoulProfile }) {
           </div>
           {Object.entries(ficha.talentos).map(([id, ranks]) => (
             <PointRow key={id} label={TALENTO_LABELS[id] ?? id} value={ranks ?? 0} />
+          ))}
+          <div className="mt-3 mb-2 text-xs font-medium text-neutral-500">
+            Profissão ({ficha.totals.profissoes} pts)
+          </div>
+          {Object.entries(ficha.profissoes).map(([id, pts]) => (
+            <PointRow key={id} label={PROFISSAO_LABELS[id] ?? id} value={pts ?? 0} />
           ))}
         </div>
       </div>

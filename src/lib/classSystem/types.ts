@@ -25,6 +25,16 @@ export const ESCOLA_ORDER: EscolaId[] = [
 
 export type RecursoId = "mana" | "fe" | "furia" | "soullink" | "ressonancia";
 
+export type ProfissaoId = "ferreiro" | "tecelao" | "artesao" | "joalheiro" | "alquimista" | "curtidor";
+
+export interface ProfissaoDef {
+  id: ProfissaoId;
+  nome: string;
+  descricao: string;
+  fatoresElementos: Partial<Record<ElementoBaseId, number>>;
+  fatoresEscolas?: Partial<Record<EscolaId, number>>;
+}
+
 /**
  * Talentos with no prerequisite (`requisito` unset in `talentos.ts`) — the
  * only ones a rookie-stage sheet can legally take, since every other talent
@@ -36,7 +46,8 @@ export type StarterTalentoId =
 
 export type FamiliaCriatura =
   | "besta" | "ave" | "aquatica" | "ignea" | "morto_vivo"
-  | "aberracao" | "planta" | "espirito" | "construto" | "demonio" | "draconico";
+  | "aberracao" | "planta" | "espirito" | "construto" | "demonio" | "draconico"
+  | "gigante" | "geleia" | "humanoide";
 
 export interface CriaturaDef {
   id: string;
@@ -54,6 +65,7 @@ export interface Ficha {
   escolas: Partial<Record<EscolaId, number>>;
   recursos: Partial<Record<RecursoId, number>>;
   talentos: Partial<Record<StarterTalentoId, number>>;
+  profissoes: Partial<Record<ProfissaoId, number>>;
   /** Pontos totais investidos por categoria — a soma bate com o orçamento. */
-  totals: { elementos: number; escolas: number; recursos: number; talentos: number };
+  totals: { elementos: number; escolas: number; recursos: number; talentos: number; profissoes: number };
 }

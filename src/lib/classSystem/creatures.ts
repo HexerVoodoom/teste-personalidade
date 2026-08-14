@@ -2,7 +2,7 @@ import { CriaturaDef, ElementoBaseId, FamiliaCriatura } from "./types";
 
 /**
  * Copied verbatim from `class-system/src/registry/criaturas.ts` — the
- * class-system's own small (26-entry), mechanically-real capturable-creature
+ * class-system's own small (34-entry), mechanically-real capturable-creature
  * registry, distinct from the large external besti-rio- bestiary. This is
  * the registry `poderCaptura`/`avaliarCaptura` (in `./capture.ts`) actually
  * operate against.
@@ -42,5 +42,11 @@ export const CRIATURAS: Record<string, CriaturaDef> = Object.fromEntries(
     c("demonio_maior", "Demônio Maior", "demonio", ["vileza", "fogo"], 80, "Pactos são selados com sangue."),
     c("wyvern", "Wyvern", "draconico", ["ar", "fogo"], 90, "Primo alado dos dragões."),
     c("dragao_jovem", "Dragão Jovem", "draconico", ["fogo", "arcano"], 120, "Ainda jovem — e já aterrador."),
+    c("troll_montanhes", "Troll Montanhês", "gigante", ["vigor", "terra"], 56, "Regenera o que perde em combate."),
+    c("ciclope_forjador", "Ciclope Forjador", "gigante", ["vigor", "fogo"], 74, "Um olho só, martelo enorme."),
+    c("gosma_acida", "Gosma Ácida", "geleia", ["agua", "vileza"], 26, "Dissolve o que toca aos poucos."),
+    c("slime_cristalino", "Slime Cristalino", "geleia", ["terra", "agua"], 40, "Núcleo mineral, corpo líquido."),
+    c("batedor_orc", "Batedor Orc", "humanoide", ["marcial", "vigor"], 32, "Rastreador implacável das fronteiras."),
+    c("arauto_elfico", "Arauto Élfico", "humanoide", ["arcano", "ar"], 46, "Mensageiro de uma corte antiga."),
   ].map((def) => [def.id, def])
 );

@@ -80,3 +80,49 @@ test("the sheet is deterministic for the same oracle input", () => {
   const b = buildFicha("Teste", axes);
   assert.deepEqual(a, b);
 });
+
+test("profissao budget is spent exactly, on a single profession", () => {
+  const ficha = buildFicha("Teste", generateOracleAxes(neutral));
+  assert.equal(ficha.totals.profissoes, ROOKIE_BUDGET.profissao);
+  assert.equal(Object.keys(ficha.profissoes).length, 1);
+});
+
+test("maldicao is reachable for a poder-leaning, high-suporte profile (it used to be dead code)", () => {
+  const axes = generateOracleAxes({
+    ...neutral,
+    traits: { ...neutral.traits, agreeableness: 95, extraversion: 95, honestyHumility: 5 },
+  });
+  const ficha = buildFicha("Teste", axes);
+  assert.ok((ficha.escolas.maldicao ?? 0) > 0, "expected maldicao to receive points for a poder-leaning profile");
+});
+
+test("soullink is reachable for a tanque-dominant profile (it used to collide with furia)", () => {
+  const axes = generateOracleAxes({
+    ...neutral,
+    traits: { ...neutral.traits, conscientiousness: 95, neuroticism: 5 },
+    astrologyElements: { fogo: 1, terra: 30, ar: 1, água: 1 },
+  });
+  assert.equal(axes.dominantRole, "tanque");
+  const ficha = buildFicha("Teste", axes);
+  assert.equal(Object.keys(ficha.recursos)[0], "soullink");
+});
+
+test("every escola and every recurso is reachable by some role/alignment profile", () => {
+  const escolaSeen = new Set<string>();
+  const recursoSeen = new Set<string>();
+  const profiles: Partial<typeof neutral.traits>[] = [
+    { extraversion: 95 }, // fisico
+    { conscientiousness: 95, neuroticism: 5 }, // tanque
+    { openness: 95 }, // magico
+    { agreeableness: 95 }, // suporte / benca
+    { agreeableness: 95, extraversion: 95, honestyHumility: 5 }, // suporte / maldicao
+  ];
+  for (const traits of profiles) {
+    const axes = generateOracleAxes({ ...neutral, traits: { ...neutral.traits, ...traits } });
+    const ficha = buildFicha("Teste", axes);
+    for (const escola of Object.keys(ficha.escolas)) escolaSeen.add(escola);
+    for (const recurso of Object.keys(ficha.recursos)) recursoSeen.add(recurso);
+  }
+  assert.ok(escolaSeen.has("maldicao"), `escolas seen: ${[...escolaSeen]}`);
+  assert.ok(recursoSeen.has("soullink"), `recursos seen: ${[...recursoSeen]}`);
+});
