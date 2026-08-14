@@ -96,7 +96,5 @@ export interface NatalChart {
   };
   /** Sun / Moon / Ascendant — the "big three" */
   bigThree: { sun: Sign; moon: Sign; ascendant: Sign | null };
-  /** Flat tag weights for downstream systems (bestiário / class-system). */
-  tagWeights: Record<string, number>;
   warnings: string[];
 }

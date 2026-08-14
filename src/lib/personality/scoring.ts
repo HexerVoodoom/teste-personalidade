@@ -1,7 +1,6 @@
 import { items, likertItems } from "./questions";
 import {
   Answers,
-  ArchetypeTag,
   Dimension,
   JungAxis,
   JungAxisScore,
@@ -58,7 +57,6 @@ interface Accumulator {
 export function scoreProfile(answers: Answers): PersonalityProfile {
   const dimAcc = new Map<Dimension, Accumulator>();
   const facetAcc = new Map<string, Accumulator & { dimension: TraitDimension; facet: string }>();
-  const tagWeights = new Map<ArchetypeTag, number>();
 
   const addDim = (dim: Dimension, earned: number, max: number) => {
     const acc = dimAcc.get(dim) ?? { earned: 0, max: 0 };
@@ -75,13 +73,6 @@ export function scoreProfile(answers: Answers): PersonalityProfile {
     facetAcc.set(key, acc);
   };
 
-  const addTags = (tags: ArchetypeTag[] | undefined, weight: number) => {
-    if (!tags || weight <= 0) return;
-    for (const tag of tags) {
-      tagWeights.set(tag, (tagWeights.get(tag) ?? 0) + weight);
-    }
-  };
-
   const isTrait = (d: Dimension): d is TraitDimension =>
     (TRAIT_DIMENSIONS as Dimension[]).includes(d);
 
@@ -94,12 +85,10 @@ export function scoreProfile(answers: Answers): PersonalityProfile {
       const value = likertValue(answer.value, item.positive);
       addDim(item.dimension, value, 4);
       if (isTrait(item.dimension)) addFacet(item.dimension, item.facet, value, 4);
-      addTags(item.tags, value / 4);
     } else if (item.kind === "forced-choice") {
       if (answer.kind !== "forced-choice") continue;
       const chosePositive = answer.choice === "a";
       addDim(item.dimension, chosePositive ? 4 : 0, 4);
-      addTags(chosePositive ? item.a.tags : item.b.tags, 1);
     } else if (item.kind === "scenario") {
       if (answer.kind !== "scenario") continue;
       const option = item.options.find((o) => o.id === answer.optionId);
@@ -110,7 +99,6 @@ export function scoreProfile(answers: Answers): PersonalityProfile {
         // Scenarios are cross-cutting by design, so they feed the factor score
         // but deliberately do not feed any single facet.
       }
-      addTags(option.tags, 1);
     }
   }
 
@@ -154,18 +142,10 @@ export function scoreProfile(answers: Answers): PersonalityProfile {
 
   const jung: JungTypeResult = { code, axes, weakAxes };
 
-  // ---- Tag ranking ----
-  const sortedTags = Array.from(tagWeights.entries()).sort((a, b) => b[1] - a[1]);
-  const dominantTags = sortedTags.slice(0, 8).map(([tag]) => tag);
-
   return {
     traits,
     jung,
     validity: computeValidity(answers),
-    dominantTags,
-    tagWeights: Object.fromEntries(
-      sortedTags.map(([tag, weight]) => [tag, Number(weight.toFixed(2))])
-    ),
     traitPoints,
     answeredCount: answeredCount(answers),
     totalItems: items.length,

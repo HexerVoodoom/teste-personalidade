@@ -161,24 +161,67 @@ exatamente o total da Expressão, para qualquer nome.
 
 ---
 
-## 4. Integração com o Soulmon
+## 4. Integração com o Soulmon — o oráculo (`src/lib/oracle`)
 
-Este projeto **não depende** dos repositórios do Soulmon (bestiário,
-class-system, prompt base/onboarding), que não estavam disponíveis quando ele
-foi escrito. O contrato de saída já existe e está estável:
+Os quatro repositórios do ecossistema Soulmon (Soulmon, bestiário,
+class-system, onboarding) foram lidos. Achados relevantes:
 
-- `SoulProfile.psychometric.traitPoints` — mapa flat 0-100 por traço e por eixo
-  junguiano. É o candidato natural para popular pontos no class-system.
-- `SoulProfile.mergedTags` — ranking de tags já fundido entre as três camadas,
-  com o peso e as camadas de origem de cada tag. É o candidato natural para
-  selecionar a criatura no bestiário.
-- Cada camada também expõe seu `tagWeights` bruto, caso a fusão precise ser
-  refeita com outros pesos.
+- O Soulmon **já tem** seu próprio motor de leitura mística
+  (`src/utils/oracle.ts`): numerologia + zodíaco + horóscopo chinês/védico +
+  quiz, pontuando 8 `ElementId` (água/fogo/terra/ar/sombra/luz/planta/
+  industrial), 5 `RoleId` (suporte/tanque/físico/mágico/alcance) e 3
+  `AlignmentId` (poder/harmonia/benevolência ≈ vírus/data/vacina). Este
+  projeto duplicava parcialmente esse trabalho com um vocabulário próprio
+  inventado — por isso ele foi removido (ver abaixo).
+- O **bestiário** (`besti-rio-`) guarda milhares de criaturas em JSON estático
+  com atributos numéricos (`forca/inteligencia/velocidade/magia`, 1-10) e tags
+  categóricas por regex — sem pesos. Está marcado para correção (tags erradas,
+  descrições poluídas) num repositório separado.
+- O **class-system** tem 17 elementos base, 6 escolas, 5 recursos, 30 talentos
+  e 29+ arquétipos emergentes, com uma API de distribuição manual de pontos
+  (`investirElemento`/`investirEscola`/…) — mas nenhuma lógica automática que
+  receba um input externo e distribua pontos sozinha.
 
-O vocabulário de tags atual (`fogo`, `terra`, `guardião`, `estrategista`, …) é
-**provisório e existe para ser substituído**. O próximo passo é ler as tags
-reais do bestiário e do class-system e trocar o vocabulário, mantendo a
-mecânica de fusão — que já está testada e é agnóstica ao vocabulário.
+Por decisão explícita: este projeto vai **substituir** o `oracle.ts` do
+Soulmon, mas até esse novo oráculo estar pronto ele permanece aqui, não é
+movido para o repositório do Soulmon.
+
+### O que o oráculo faz
+
+`generateOracleAxes()` (`src/lib/oracle/generate.ts`) recebe os traços 0-100
+já computados (Big Five + HEXACO), os eixos junguianos, a distribuição de
+elementos/polaridades do mapa astral e os números centrais da numerologia, e
+devolve exatamente o formato que o `oracle.ts` do Soulmon já usa —
+`ElementId`/`RoleId`/`AlignmentId`/`RealmId` — para ser um substituto
+compatível. Cada fórmula é documentada e determinística (sem hash/RNG, porque
+os inputs aqui já são contínuos, diferente das poucas categorias discretas que
+o `oracle.ts` original lê). Exemplos:
+
+- `terra`/`tanque` sobem com Conscienciosidade; `fogo`/`fisico` com
+  Extroversão (faceta assertividade); `agua`/`suporte` com Amabilidade;
+  `ar`/`magico` com Abertura + intuição junguiana (N).
+- `sombra` sobe com Neuroticismo e Honestidade-Humildade baixa; `luz` sobe com
+  Honestidade-Humildade alta.
+- Reinos (`RealmId`) são função pura dos elementos, reaproveitando a tabela de
+  pesos `REALM_WEIGHTS` do próprio `oracle.ts` — afinidade de bioma é
+  geografia do mundo, não personalidade, então não há razão para recalculá-la.
+- Uma ponte provisória para os 17 elementos do class-system copia os 6
+  elementos com nome idêntico (`fogo água terra ar sombra luz`) e deixa os
+  outros 11 (`eletricidade arcano vileza morte vida vigor marcial tempo som
+  gravidade espaco`) com peso baixo e documentado como "não modelado" — eles
+  não têm âncora nos dados atuais e não deveriam ser inventados.
+
+### Por que o vocabulário de tags anterior foi removido
+
+A primeira versão deste projeto tinha um vocabulário de tags inventado
+(`fogo, terra, guardião, estrategista, vanguarda, soberano, precisão,
+instável, explorador, criador, encantamento, caos, …`) espalhado pelos itens
+do questionário, pelo mapa astral e pela numerologia, fundidos num
+`mergedTags`. Depois de ler os três repos, ficou claro que metade desse
+vocabulário não correspondia a nada real em nenhum sistema — era analogia,
+não integração. Ele foi removido de `questions.ts`, `astrology/types.ts` e
+`numerology.ts`, e substituído pelo oráculo acima, que usa **só** vocabulário
+que já existe em pelo menos um dos repos do Soulmon.
 
 ---
 

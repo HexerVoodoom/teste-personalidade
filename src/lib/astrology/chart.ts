@@ -347,19 +347,12 @@ export function computeNatalChart(birth: BirthData): NatalChart {
   const elements: Record<Element, number> = { fogo: 0, terra: 0, ar: 0, "água": 0 };
   const modalities: Record<Modality, number> = { cardinal: 0, fixo: 0, "mutável": 0 };
   const polarities: Record<Polarity, number> = { diurno: 0, noturno: 0 };
-  const tagWeights: Record<string, number> = {};
-
-  const addTag = (tag: string, w: number) => {
-    tagWeights[tag] = (tagWeights[tag] ?? 0) + w;
-  };
 
   for (const b of bodies) {
     const w = BODY_WEIGHT[b.body] ?? 1;
     elements[SIGN_ELEMENT[b.sign]] += w;
     modalities[SIGN_MODALITY[b.sign]] += w;
     polarities[SIGN_POLARITY[b.sign]] += w;
-    addTag(SIGN_ELEMENT[b.sign], w);
-    addTag(SIGN_MODALITY[b.sign], w * 0.5);
   }
 
   if (!birth.timeUnknown) {
@@ -368,8 +361,6 @@ export function computeNatalChart(birth: BirthData): NatalChart {
     elements[SIGN_ELEMENT[ascSign]] += w;
     modalities[SIGN_MODALITY[ascSign]] += w;
     polarities[SIGN_POLARITY[ascSign]] += w;
-    addTag(SIGN_ELEMENT[ascSign], w);
-    addTag(SIGN_MODALITY[ascSign], w * 0.5);
   }
 
   const aspects = computeAspects(bodies);
@@ -389,7 +380,6 @@ export function computeNatalChart(birth: BirthData): NatalChart {
       moon: signOf(bodies.find((b) => b.body === "Lua")!.longitude),
       ascendant: birth.timeUnknown ? null : signOf(asc),
     },
-    tagWeights,
     warnings,
   };
 }

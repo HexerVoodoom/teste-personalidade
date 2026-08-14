@@ -27,19 +27,11 @@ export const TRAIT_DIMENSIONS: TraitDimension[] = [
 
 export const JUNG_AXES: JungAxis[] = ["EI", "SN", "TF", "JP"];
 
-/**
- * Tags are the seam for integration with the Soulmon ecosystem
- * (bestiário / class-system). This project deliberately owns only a
- * provisional vocabulary; the real bestiary tags replace it later.
- */
-export type ArchetypeTag = string;
-
 export type ItemKind = "likert" | "frequency" | "forced-choice" | "scenario";
 
 interface BaseItem {
   id: string;
   kind: ItemKind;
-  tags?: ArchetypeTag[];
 }
 
 /** Agreement item, answered on a 1-5 Likert scale. */
@@ -50,7 +42,6 @@ export interface LikertItem extends BaseItem {
   text: string;
   /** false = reverse-keyed: agreeing lowers the trait score. */
   positive: boolean;
-  tags: ArchetypeTag[];
   /** Marks this item as one half of a consistency-check pair. */
   consistencyPair?: string;
 }
@@ -62,9 +53,9 @@ export interface ForcedChoiceItem extends BaseItem {
   facet: string;
   prompt: string;
   /** Option A scores toward the dimension's positive pole. */
-  a: { text: string; tags: ArchetypeTag[] };
+  a: { text: string };
   /** Option B scores toward the negative pole. */
-  b: { text: string; tags: ArchetypeTag[] };
+  b: { text: string };
 }
 
 /** Situational item: one stem, four reactions loading on several traits. */
@@ -78,7 +69,6 @@ export interface ScenarioItem extends BaseItem {
     text: string;
     /** 0-4 contribution per covered dimension. */
     weights: Partial<Record<Dimension, number>>;
-    tags: ArchetypeTag[];
   }[];
 }
 
@@ -144,8 +134,6 @@ export interface PersonalityProfile {
   traits: Record<TraitDimension, TraitScore>;
   jung: JungTypeResult;
   validity: ValidityIndices;
-  dominantTags: ArchetypeTag[];
-  tagWeights: Record<ArchetypeTag, number>;
   /** Flat 0-100 map — the export contract for the class-system. */
   traitPoints: Record<string, number>;
   answeredCount: number;

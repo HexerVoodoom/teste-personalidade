@@ -121,25 +121,7 @@ export interface NumerologyMap {
   pinnacles: { index: number; value: number; startAge: number; endAge: number | null }[];
   /** Every karmic debt found anywhere in the map. */
   karmicDebts: number[];
-  /** Flat tag weights for downstream systems (bestiário / class-system). */
-  tagWeights: Record<string, number>;
 }
-
-/** Archetype flavour per root number — the hook for creature generation. */
-export const NUMBER_TAGS: Record<number, string[]> = {
-  1: ["vanguarda", "fogo", "iniciador"],
-  2: ["suporte", "água", "diplomata"],
-  3: ["ar", "criador", "expressivo"],
-  4: ["terra", "guardião", "construtor"],
-  5: ["ar", "explorador", "mutável"],
-  6: ["água", "curandeiro", "protetor"],
-  7: ["arcano", "sombra", "místico"],
-  8: ["terra", "estrategista", "soberano"],
-  9: ["água", "arcano", "altruísta"],
-  11: ["arcano", "ar", "visionário"],
-  22: ["terra", "arcano", "arquiteto"],
-  33: ["água", "curandeiro", "arcano"],
-};
 
 export function computeNumerology(fullName: string, birthDate: string, referenceYear: number): NumerologyMap {
   const normalized = normalizeName(fullName);
@@ -228,21 +210,6 @@ export function computeNumerology(fullName: string, birthDate: string, reference
     )
   ).sort((a, b) => a - b);
 
-  // --- Tag weights: core numbers carry more weight than derived ones. ---
-  const tagWeights: Record<string, number> = {};
-  const addTags = (value: number, weight: number) => {
-    for (const tag of NUMBER_TAGS[value] ?? []) {
-      tagWeights[tag] = (tagWeights[tag] ?? 0) + weight;
-    }
-  };
-  addTags(lifePath.value, 3);
-  addTags(expression.value, 2.5);
-  addTags(soulUrge.value, 2);
-  addTags(personality.value, 1.5);
-  addTags(maturity.value, 1);
-  addTags(birthday.value, 1);
-  for (const digit of hiddenPassion) addTags(digit, 1);
-
   return {
     normalizedName: normalized,
     lifePath,
@@ -260,6 +227,5 @@ export function computeNumerology(fullName: string, birthDate: string, reference
     challenges,
     pinnacles,
     karmicDebts,
-    tagWeights,
   };
 }

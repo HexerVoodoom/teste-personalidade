@@ -235,15 +235,6 @@ test("mismatched answer kinds are ignored instead of corrupting scores", () => {
   }
 });
 
-test("tag weights are emitted and ranked for downstream systems", () => {
-  const profile = scoreProfile(buildAnswers((item) => (item.positive ? 5 : 1)));
-  assert.ok(profile.dominantTags.length > 0);
-  const weights = profile.dominantTags.map((t) => profile.tagWeights[t]);
-  for (let i = 1; i < weights.length; i++) {
-    assert.ok(weights[i - 1] >= weights[i], "dominantTags must be sorted by weight");
-  }
-});
-
 test("traitPoints exposes every trait and Jungian axis", () => {
   const profile = scoreProfile(buildAnswers(() => 4));
   for (const dim of TRAIT_DIMENSIONS) {

@@ -1,6 +1,8 @@
 import { computeNatalChart } from "./astrology/chart";
 import { NatalChart } from "./astrology/types";
 import { computeNumerology, NumerologyMap } from "./numerology/numerology";
+import { generateOracleAxes } from "./oracle/generate";
+import { OracleAxes } from "./oracle/types";
 import { scoreProfile } from "./personality/scoring";
 import { Answers, PersonalityProfile } from "./personality/types";
 
@@ -15,36 +17,19 @@ export interface OnboardingData {
   timeZone: string;
 }
 
-/**
- * The three layers are kept separate on purpose.
- *
- * `psychometric` is the only layer with empirical validation behind it and is
- * the one that should drive anything consequential. `astrology` and
- * `numerology` are symbolic systems with no predictive validity — they are
- * here as narrative colour for creature generation, and are weighted well
- * below the psychometric layer when the layers are merged into tags.
- */
-export const LAYER_WEIGHTS = {
-  psychometric: 1.0,
-  astrology: 0.45,
-  numerology: 0.3,
-} as const;
-
 export interface SoulProfile {
   onboarding: OnboardingData;
   psychometric: PersonalityProfile;
   astrology: NatalChart;
   numerology: NumerologyMap;
-  /** Merged, layer-weighted tag ranking — the handoff to the creature system. */
-  mergedTags: { tag: string; weight: number; sources: string[] }[];
+  /**
+   * Element/role/alignment/realm axes in the vocabulary Soulmon's own
+   * `oracle.ts` already uses, derived from the three engines above. This is
+   * the intended replacement for that file's astrology+numerology+quiz math —
+   * see `src/lib/oracle/generate.ts` for the formulas.
+   */
+  oracle: OracleAxes;
   generatedAt: string;
-}
-
-/** Rescales a weight map so its largest entry is 1, making layers comparable. */
-function normalize(weights: Record<string, number>): Record<string, number> {
-  const max = Math.max(0, ...Object.values(weights));
-  if (max === 0) return {};
-  return Object.fromEntries(Object.entries(weights).map(([k, v]) => [k, v / max]));
 }
 
 export function buildSoulProfile(
@@ -70,38 +55,47 @@ export function buildSoulProfile(
     now.getUTCFullYear()
   );
 
-  // Each layer is normalized to a 0-1 range first, so a layer with many tags
-  // cannot outvote another simply by having more entries.
-  const layers: [string, Record<string, number>, number][] = [
-    ["psicométrico", normalize(psychometric.tagWeights), LAYER_WEIGHTS.psychometric],
-    ["astrológico", normalize(astrology.tagWeights), LAYER_WEIGHTS.astrology],
-    ["numerológico", normalize(numerology.tagWeights), LAYER_WEIGHTS.numerology],
-  ];
-
-  const merged = new Map<string, { weight: number; sources: Set<string> }>();
-  for (const [source, weights, factor] of layers) {
-    for (const [tag, value] of Object.entries(weights)) {
-      const entry = merged.get(tag) ?? { weight: 0, sources: new Set<string>() };
-      entry.weight += value * factor;
-      entry.sources.add(source);
-      merged.set(tag, entry);
+  const facets: Record<string, number> = {};
+  for (const trait of Object.values(psychometric.traits)) {
+    for (const f of trait.facets) {
+      facets[`${trait.dimension}:${f.facet}`] = f.score;
     }
   }
 
-  const mergedTags = Array.from(merged.entries())
-    .map(([tag, { weight, sources }]) => ({
-      tag,
-      weight: Number(weight.toFixed(3)),
-      sources: Array.from(sources),
-    }))
-    .sort((a, b) => b.weight - a.weight || a.tag.localeCompare(b.tag, "pt-BR"));
+  const oracle = generateOracleAxes({
+    traits: {
+      openness: psychometric.traits.openness.score,
+      conscientiousness: psychometric.traits.conscientiousness.score,
+      extraversion: psychometric.traits.extraversion.score,
+      agreeableness: psychometric.traits.agreeableness.score,
+      neuroticism: psychometric.traits.neuroticism.score,
+      honestyHumility: psychometric.traits.honestyHumility.score,
+    },
+    facets,
+    jung: {
+      EI: psychometric.jung.axes.EI.score,
+      SN: psychometric.jung.axes.SN.score,
+      TF: psychometric.jung.axes.TF.score,
+      JP: psychometric.jung.axes.JP.score,
+    },
+    astrologyElements: astrology.distribution.elements,
+    astrologyPolarities: astrology.distribution.polarities,
+    numerologyNumbers: [
+      numerology.lifePath.value,
+      numerology.expression.value,
+      numerology.soulUrge.value,
+      numerology.personality.value,
+      numerology.birthday.value,
+      numerology.maturity.value,
+    ],
+  });
 
   return {
     onboarding,
     psychometric,
     astrology,
     numerology,
-    mergedTags,
+    oracle,
     generatedAt: now.toISOString(),
   };
 }

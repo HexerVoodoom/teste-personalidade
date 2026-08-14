@@ -27,21 +27,25 @@ npm run build
 
 O usuário informa nome completo, data, hora e cidade de nascimento, responde ao
 questionário, e o resultado é um `SoulProfile` — um JSON que já é o contrato de
-entrada pensado para os outros dois projetos.
+entrada pensado para o bestiário e o class-system do Soulmon.
 
 ```
-Onboarding ─┬─> mapa astral    (data + hora + cidade)
+Onboarding ─┬─> mapa astral       (data + hora + cidade)
             └─> mapa numerológico (nome + data)
 Questionário ──> perfil psicométrico
                         │
-                        └──> mergedTags  ──> [bestiário / class-system]
+                        └──> oráculo (ElementId/RoleId/AlignmentId/RealmId)
+                                    ──> [bestiário / class-system]
 ```
 
-As três camadas são fundidas em um único ranking de tags, cada camada
-normalizada antes de ser pesada para que nenhuma domine só por ter mais tags. O
-peso é deliberadamente desigual: o psicométrico vale 1.0, o astrológico 0.45 e o
-numerológico 0.3, porque só o primeiro tem validação empírica. Ver
-[`docs/fundamentacao.md`](docs/fundamentacao.md).
+O oráculo (`src/lib/oracle`) fala o mesmo vocabulário que o `oracle.ts` do
+Soulmon já usa — 8 elementos, 5 papéis, 3 alinhamentos, 9 reinos — e é pensado
+para **substituir** aquele arquivo assim que estiver maduro. Cada eixo é uma
+função determinística e documentada dos traços psicométricos, dos eixos
+junguianos, da distribuição de elementos do mapa astral e dos números centrais
+da numerologia. Ver [`docs/fundamentacao.md`](docs/fundamentacao.md) para a
+justificativa de cada fórmula e para os achados da leitura dos repositórios do
+Soulmon, do bestiário e do class-system.
 
 ## Estrutura
 
@@ -50,7 +54,8 @@ src/lib/personality/   itens, scoring, facetas, índices de validade
 src/lib/astrology/     efemérides, ângulos, casas Placidus, aspectos
 src/lib/numerology/    numerologia pitagórica
 src/lib/onboarding/    tabela de cidades com fuso IANA
-src/lib/profile.ts     fusão das três camadas
+src/lib/oracle/        elemento/papel/alinhamento/reino (vocabulário do Soulmon)
+src/lib/profile.ts     junta as três camadas + o oráculo
 src/components/        onboarding, quiz, resultados
 ```
 
@@ -73,7 +78,10 @@ avisado.
 
 ## Próximo passo
 
-Ler os repositórios do Soulmon (bestiário, class-system, prompt base e
-onboarding) e substituir o vocabulário provisório de tags pelo vocabulário real
-do bestiário. A mecânica de fusão já está testada e é agnóstica ao vocabulário —
-só a tabela de tags muda.
+- Corrigir o bestiário (`besti-rio-`): tags erradas e descrições poluídas,
+  num repositório separado.
+- Amadurecer o oráculo até ele poder substituir de fato o `oracle.ts` do
+  Soulmon (hoje ele já produz o mesmo formato de saída, mas ainda vive
+  aqui).
+- Ligar `oracle.classElements` (os 17 elementos do class-system) a uma API de
+  distribuição real, em vez de só expor os escores.

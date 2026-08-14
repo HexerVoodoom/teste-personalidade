@@ -5,6 +5,8 @@ import { formatPosition } from "@/lib/astrology/chart";
 import { jungAxisLabels, numberMeanings, traitLabels } from "@/lib/personality/labels";
 import { TRAIT_DIMENSIONS, JUNG_AXES } from "@/lib/personality/types";
 import { NumberResult } from "@/lib/numerology/numerology";
+import { alignmentLabels, elementLabels, realmLabels, roleLabels } from "@/lib/oracle/labels";
+import { ALIGNMENT_ORDER, ELEMENT_ORDER, REALM_ORDER, ROLE_ORDER } from "@/lib/oracle/types";
 import { SoulProfile } from "@/lib/profile";
 
 function Bar({ label, score, low, high }: { label: string; score: number; low: string; high: string }) {
@@ -63,7 +65,7 @@ function NumberCard({ label, result, hint }: { label: string; result: NumberResu
 
 export default function Results({ profile, onRestart }: { profile: SoulProfile; onRestart: () => void }) {
   const [showJson, setShowJson] = useState(false);
-  const { psychometric, astrology, numerology, mergedTags, onboarding } = profile;
+  const { psychometric, astrology, numerology, oracle, onboarding } = profile;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-10 p-6">
@@ -279,20 +281,86 @@ export default function Results({ profile, onRestart }: { profile: SoulProfile; 
       </Section>
 
       <Section
-        title="Tags combinadas"
-        subtitle="Vocabulário provisório, a ser substituído pelas tags reais do bestiário. A camada psicométrica pesa mais que as simbólicas."
+        title="Oráculo"
+        subtitle="Elemento, papel, alinhamento e reino no vocabulário do Soulmon — derivados diretamente do perfil psicométrico, do mapa astral e do mapa numerológico acima. É o contrato de saída para o bestiário e o class-system."
       >
-        <div className="flex flex-wrap gap-2">
-          {mergedTags.slice(0, 14).map((entry) => (
-            <span
-              key={entry.tag}
-              title={`peso ${entry.weight} · ${entry.sources.join(", ")}`}
-              className="rounded-full bg-indigo-100 px-3 py-1 text-sm text-indigo-900 dark:bg-indigo-950 dark:text-indigo-200"
-            >
-              {entry.tag}
-              <span className="ml-1 text-xs opacity-60">{entry.weight}</span>
-            </span>
-          ))}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+            <div className="mb-1 text-xs font-medium text-neutral-500">Elemento dominante</div>
+            <div className="text-lg font-semibold">
+              {elementLabels[oracle.dominantElement].emoji} {elementLabels[oracle.dominantElement].name}
+            </div>
+          </div>
+          <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+            <div className="mb-1 text-xs font-medium text-neutral-500">Papel dominante</div>
+            <div className="text-lg font-semibold">
+              {roleLabels[oracle.dominantRole].emoji} {roleLabels[oracle.dominantRole].name}
+            </div>
+          </div>
+          <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+            <div className="mb-1 text-xs font-medium text-neutral-500">Alinhamento dominante</div>
+            <div className="text-lg font-semibold">
+              {alignmentLabels[oracle.dominantAlignment].emoji} {alignmentLabels[oracle.dominantAlignment].name}
+            </div>
+          </div>
+          <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
+            <div className="mb-1 text-xs font-medium text-neutral-500">Reino dominante</div>
+            <div className="text-lg font-semibold">
+              {realmLabels[oracle.dominantRealm].emoji} {realmLabels[oracle.dominantRealm].name}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <div className="text-xs font-medium text-neutral-500">Elementos</div>
+            {ELEMENT_ORDER.map((el) => (
+              <Bar
+                key={el}
+                label={`${elementLabels[el].emoji} ${elementLabels[el].name}`}
+                score={Math.round(oracle.elements[el])}
+                low=""
+                high=""
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="text-xs font-medium text-neutral-500">Papéis</div>
+            {ROLE_ORDER.map((role) => (
+              <Bar
+                key={role}
+                label={`${roleLabels[role].emoji} ${roleLabels[role].name}`}
+                score={Math.round(oracle.roles[role])}
+                low=""
+                high=""
+              />
+            ))}
+            <div className="mt-2 text-xs font-medium text-neutral-500">Alinhamentos</div>
+            {ALIGNMENT_ORDER.map((alignment) => (
+              <Bar
+                key={alignment}
+                label={`${alignmentLabels[alignment].emoji} ${alignmentLabels[alignment].name}`}
+                score={Math.round(oracle.alignments[alignment])}
+                low=""
+                high=""
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-2 text-xs font-medium text-neutral-500">Reinos</div>
+          <div className="flex flex-wrap gap-2">
+            {REALM_ORDER.map((realm) => (
+              <span
+                key={realm}
+                className="rounded-full bg-neutral-100 px-3 py-1 text-xs dark:bg-neutral-900"
+              >
+                {realmLabels[realm].emoji} {realmLabels[realm].name}
+                <span className="ml-1 text-neutral-400">{Math.round(oracle.realms[realm])}</span>
+              </span>
+            ))}
+          </div>
         </div>
       </Section>
 

@@ -122,10 +122,3 @@ test("an empty name degrades without throwing", () => {
   assert.equal(map.hiddenPassion.length, 0);
   assert.equal(map.karmicLessons.length, 9);
 });
-
-test("tag weights are produced for downstream systems", () => {
-  const map = computeNumerology("Ana Silva", "1990-11-25", 2026);
-  const total = Object.values(map.tagWeights).reduce((a, b) => a + b, 0);
-  assert.ok(total > 0);
-  assert.ok(Object.values(map.tagWeights).every((w) => w > 0));
-});
