@@ -18,6 +18,8 @@
  * invented.
  */
 
+import type { DominantElementCandidate } from "./derivedElements";
+
 export type ElementId =
   | "agua" | "fogo" | "terra" | "ar"
   | "sombra" | "luz" | "planta" | "industrial";
@@ -61,4 +63,10 @@ export interface OracleAxes {
   dominantRole: RoleId;
   dominantAlignment: AlignmentId;
   dominantRealm: RealmId;
+  /**
+   * The class-system elemento(s) — base or derived combo (e.g. Água+Terra →
+   * Pântano) — that best represent `classElements`, considering balance
+   * between paired components. See `derivedElements.ts`. 1–3 entries.
+   */
+  dominantClassElements: DominantElementCandidate[];
 }

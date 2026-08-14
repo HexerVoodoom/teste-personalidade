@@ -6,6 +6,7 @@ import {
   RealmId, REALM_ORDER,
   RoleId, ROLE_ORDER,
 } from "./types";
+import { computeDominantClassElements } from "./derivedElements";
 
 /**
  * Numerology → element/role/alignment affinity tables, copied from
@@ -192,15 +193,18 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
     tempo: 5, som: 5, gravidade: 5, espaco: 5,
   };
 
+  const sharedClassElements = toShare(classElements, CLASS_ELEMENT_ORDER);
+
   return {
     elements: toShare(elements, ELEMENT_ORDER),
     roles: toShare(roles, ROLE_ORDER),
     alignments: toShare(alignments, ALIGNMENT_ORDER),
     realms: toShare(realms, REALM_ORDER),
-    classElements: toShare(classElements, CLASS_ELEMENT_ORDER),
+    classElements: sharedClassElements,
     dominantElement: argmax(elements, ELEMENT_ORDER),
     dominantRole: argmax(roles, ROLE_ORDER),
     dominantAlignment: argmax(alignments, ALIGNMENT_ORDER),
     dominantRealm: argmax(realms, REALM_ORDER),
+    dominantClassElements: computeDominantClassElements(sharedClassElements),
   };
 }

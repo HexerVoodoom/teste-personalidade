@@ -7,6 +7,7 @@ import { TRAIT_DIMENSIONS, JUNG_AXES } from "@/lib/personality/types";
 import { NumberResult } from "@/lib/numerology/numerology";
 import { alignmentLabels, elementLabels, realmLabels, roleLabels } from "@/lib/oracle/labels";
 import { ALIGNMENT_ORDER, ELEMENT_ORDER, REALM_ORDER, ROLE_ORDER } from "@/lib/oracle/types";
+import { BASE_ELEMENT_LABELS } from "@/lib/oracle/derivedElements";
 import { SoulProfile } from "@/lib/profile";
 import CreatureFicha from "@/components/CreatureFicha";
 
@@ -331,6 +332,28 @@ export default function Results({
             <div className="text-lg font-semibold">
               {realmLabels[oracle.dominantRealm].emoji} {realmLabels[oracle.dominantRealm].name}
             </div>
+          </div>
+          <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800 sm:col-span-2">
+            <div className="mb-1 text-xs font-medium text-neutral-500">
+              Elemento(s) dominante(s) (class-system)
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {oracle.dominantClassElements.map((c) => (
+                <span key={c.id} className="text-lg font-semibold">
+                  {c.nome}
+                  {c.componentes && (
+                    <span className="ml-1 text-xs font-normal text-neutral-500">
+                      ({c.componentes.map((el) => BASE_ELEMENT_LABELS[el]).join(" + ")})
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-neutral-500">
+              Combina os 17 elementos base do class-system em pares: um par balanceado (nenhum lado mais
+              de 70% acima do outro) vira um elemento derivado só (ex.: Água+Terra → Pântano) em vez de
+              listar os dois separados; um segundo elemento entra junto quando fica a até 20% do primeiro.
+            </p>
           </div>
         </div>
 
