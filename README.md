@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Teste de Personalidade — Soulmon
 
-## Getting Started
+Primeira etapa do projeto Soulmon: o teste que gera o perfil que mais tarde vai
+alimentar o bestiário e o class-system para criar a criatura do usuário.
 
-First, run the development server:
+Gera três camadas a partir de um onboarding curto e de 54 itens:
+
+- **Perfil psicométrico** — Big Five + Honestidade-Humildade (HEXACO), com
+  escores por faceta e índices de validade de resposta.
+- **Mapa astral completo** — posições geocêntricas reais, Ascendente,
+  Meio-do-Céu, casas Placidus, aspectos e distribuição por elemento/modalidade.
+- **Mapa numerológico completo** — numerologia pitagórica com caminho de vida,
+  expressão, motivação, desafios, pináculos e dívidas cármicas.
+
+Tudo roda no navegador. Nenhum dado sai do dispositivo.
+
+## Rodando
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm test        # 63 testes
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Como funciona
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O usuário informa nome completo, data, hora e cidade de nascimento, responde ao
+questionário, e o resultado é um `SoulProfile` — um JSON que já é o contrato de
+entrada pensado para os outros dois projetos.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+Onboarding ─┬─> mapa astral    (data + hora + cidade)
+            └─> mapa numerológico (nome + data)
+Questionário ──> perfil psicométrico
+                        │
+                        └──> mergedTags  ──> [bestiário / class-system]
+```
 
-## Learn More
+As três camadas são fundidas em um único ranking de tags, cada camada
+normalizada antes de ser pesada para que nenhuma domine só por ter mais tags. O
+peso é deliberadamente desigual: o psicométrico vale 1.0, o astrológico 0.45 e o
+numerológico 0.3, porque só o primeiro tem validação empírica. Ver
+[`docs/fundamentacao.md`](docs/fundamentacao.md).
 
-To learn more about Next.js, take a look at the following resources:
+## Estrutura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/lib/personality/   itens, scoring, facetas, índices de validade
+src/lib/astrology/     efemérides, ângulos, casas Placidus, aspectos
+src/lib/numerology/    numerologia pitagórica
+src/lib/onboarding/    tabela de cidades com fuso IANA
+src/lib/profile.ts     fusão das três camadas
+src/components/        onboarding, quiz, resultados
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Precisão dos cálculos astrológicos
 
-## Deploy on Vercel
+As posições planetárias vêm de [`astronomy-engine`](https://github.com/cosinekitty/astronomy)
+e são rotacionadas para a eclíptica verdadeira da data. São verificadas em teste
+contra efemérides publicadas (tolerância de 0,05° nos dez corpos).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+O instante UTC é resolvido a partir do fuso IANA da cidade usando a tz database
+do runtime, o que honra as regras históricas de horário de verão — errar isso
+desloca o Ascendente em ~15°, e há teste cobrindo o caso do horário de verão
+brasileiro.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Onde o cálculo não é possível, o sistema degrada explicitamente em vez de
+inventar precisão: sem horário de nascimento, o Ascendente e as casas ficam
+indisponíveis; acima dos círculos polares, onde Placidus é matematicamente
+indefinido, as casas caem para Signos Inteiros. Nos dois casos o usuário é
+avisado.
+
+## Próximo passo
+
+Ler os repositórios do Soulmon (bestiário, class-system, prompt base e
+onboarding) e substituir o vocabulário provisório de tags pelo vocabulário real
+do bestiário. A mecânica de fusão já está testada e é agnóstica ao vocabulário —
+só a tabela de tags muda.
