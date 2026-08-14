@@ -34,8 +34,8 @@ test("a water-dominant profile is more likely to land on a water creature than a
   for (let i = 0; i < 40; i++) {
     const w = selectBestiaryCreature(waterAxes, `user-${i}`);
     const f = selectBestiaryCreature(fireAxes, `user-${i}`);
-    if (w.creature.tags.some((t) => t.includes("Água"))) waterHits++;
-    if (f.creature.tags.some((t) => t.includes("Fogo"))) fireHits++;
+    if (w.creature.elementos.includes("agua")) waterHits++;
+    if (f.creature.elementos.includes("fogo")) fireHits++;
   }
   assert.ok(waterHits > 10, `only ${waterHits}/40 water picks for a water-dominant profile`);
   assert.ok(fireHits > 10, `only ${fireHits}/40 fire picks for a fire-dominant profile`);

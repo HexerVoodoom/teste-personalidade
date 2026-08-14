@@ -2,31 +2,51 @@ import { mulberry32, hashString, pick } from "../rng";
 import { AlignmentId, ElementId, OracleAxes, RealmId, RoleId } from "../oracle/types";
 import { BESTIARY_SEED, BestiaryCreature, BestiaryTamanho } from "./seed";
 
-const ELEMENT_TO_TAGS: Record<ElementId, string[]> = {
-  agua: ["Elemental de Água", "Aquático"],
-  fogo: ["Elemental de Fogo", "Elemental de Lava"],
-  terra: ["Elemental de Terra"],
-  ar: ["Elemental de Vento", "Alado"],
-  sombra: ["Elemental Sombrio"],
-  luz: ["Elemental de Luz"],
-  planta: ["Planta"],
-  industrial: ["Alienígena/Cósmico", "Geleia/Slime"],
+/**
+ * besti-rio-'s `elementos` are class-system element ids (17 base + derived).
+ * The oracle scores only the 17 base ids (`classElements`), so a handful of
+ * common derived ids a creature might carry are mapped down to the base
+ * component(s) they're actually made of, purely for matching purposes here
+ * — the creature's own `elementos` field is left untouched.
+ */
+const DERIVED_TO_BASE: Record<string, string[]> = {
+  lava: ["fogo", "terra"],
+  veneno: ["agua", "vileza"],
+  gelo: ["agua"],
 };
 
-const REALM_TO_BIOMAS: Record<RealmId, string[]> = {
-  deserto: ["Deserto", "Savana"],
-  picos: ["Montanha", "Céus"],
-  oceano: ["Oceano", "Abissal", "Água"],
-  pantano: ["Pântano"],
-  floresta: ["Floresta", "Floresta Tropical"],
-  cavernas: ["Caverna", "Subterrâneo", "Masmorra", "Submundo", "Ruínas"],
-  gelo: ["Montanha", "Espaço"],
-  campina: ["Planície", "Urbano"],
-  akasha: ["Espaço", "Ruínas", "Mundo Digital"],
+function baseElementIds(elementos: string[]): string[] {
+  return elementos.flatMap((id) => DERIVED_TO_BASE[id] ?? [id]);
+}
+
+/** Soulmon's 8-element vocabulary maps onto a subset of the class-system's
+ *  17 — used to translate the oracle's dominant Soulmon element into the
+ *  class-system ids besti-rio- actually carries. `sombra`/`luz` are shared
+ *  by name; `planta`/`industrial` don't exist as class-system base elements
+ *  and fall back to a close relative. */
+const ORACLE_ELEMENT_TO_CLASS_SYSTEM: Record<ElementId, string[]> = {
+  agua: ["agua"],
+  fogo: ["fogo"],
+  terra: ["terra"],
+  ar: ["ar"],
+  sombra: ["sombra"],
+  luz: ["luz"],
+  planta: ["vida"],
+  industrial: ["marcial"],
 };
 
-/** Alignment leans the acceptable hostility band: poder skews aggressive,
- *  benevolência skews gentle, harmonia sits in the middle. */
+const REALM_TO_FAMILIAS: Record<RealmId, string[]> = {
+  deserto: ["besta", "aberracao"],
+  picos: ["ave", "gigante", "draconico"],
+  oceano: ["aquatica"],
+  pantano: ["planta", "aberracao"],
+  floresta: ["besta", "planta", "espirito"],
+  cavernas: ["morto_vivo", "construto", "demonio"],
+  gelo: ["besta", "espirito"],
+  campina: ["besta", "ave", "humanoide"],
+  akasha: ["espirito", "aberracao", "demonio"],
+};
+
 const ALIGNMENT_TO_HOSTILIDADE: Record<AlignmentId, [number, number]> = {
   poder: [6, 10],
   harmonia: [3, 8],
@@ -48,11 +68,12 @@ export interface BestiaryMatch {
 
 function scoreCreature(c: BestiaryCreature, oracle: OracleAxes): number {
   let score = 0;
-  const elementTags = ELEMENT_TO_TAGS[oracle.dominantElement];
-  if (c.tags.some((t) => elementTags.includes(t))) score += 3;
 
-  const biomas = REALM_TO_BIOMAS[oracle.dominantRealm];
-  if (c.bioma.some((b) => biomas.includes(b)) || c.bioma.includes("Qualquer")) score += 2;
+  const creatureBaseElements = new Set(baseElementIds(c.elementos));
+  const wantedElements = ORACLE_ELEMENT_TO_CLASS_SYSTEM[oracle.dominantElement];
+  if (wantedElements.some((e) => creatureBaseElements.has(e))) score += 3;
+
+  if (REALM_TO_FAMILIAS[oracle.dominantRealm].includes(c.familia)) score += 2;
 
   const [lo, hi] = ALIGNMENT_TO_HOSTILIDADE[oracle.dominantAlignment];
   if (c.hostilidade >= lo && c.hostilidade <= hi) score += 2;

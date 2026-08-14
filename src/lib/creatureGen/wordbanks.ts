@@ -118,3 +118,38 @@ export const ROOKIE_LOOK: string[] = [
   "a small curled-up shape", "a baby-sized round form", "a squishy little body",
   "a pint-sized simple shape", "a tiny bouncy body", "a small button-eyed form",
 ];
+
+/**
+ * Body-plan silhouettes, independent of species — combined with a family
+ * feature (below) to build a concrete, original creature concept instead of
+ * a generic "X-like creature" description.
+ */
+export const BODY_PLANS: string[] = [
+  "small bipedal stance",
+  "sturdy quadruped stance",
+  "coiled serpentine body",
+  "floating levitating form",
+  "hunched low-slung body",
+];
+
+/**
+ * One distinctive visual feature per besti-rio- / class-system creature
+ * family (`FamiliaCriatura`) — this is what turns "inspired by the bestiary
+ * pick" into an actual visual trait instead of a name-drop in the bio text.
+ */
+export const FAMILIA_FEATURES: Record<string, string[]> = {
+  besta: ["short fur and a stubby tail", "rounded ears and soft paws", "a fanged little snout"],
+  ave: ["a pair of stubby wings", "a small crest of feathers", "clawed bird-like feet"],
+  aquatica: ["small fins along its back", "a sleek finned tail", "gill-like markings on its neck"],
+  ignea: ["ember-cracked skin", "a smoldering tuft on its head", "faint smoke curling off its back"],
+  morto_vivo: ["patchy translucent skin", "hollow glowing eye sockets", "tattered wisps trailing behind it"],
+  aberracao: ["one extra small eye", "faintly asymmetrical limbs", "a subtly wrong, unsettling proportion"],
+  planta: ["small leaves sprouting from its head", "a woody bark-like patch on its back", "a tiny budding flower"],
+  espirito: ["a faint translucent glow", "small drifting motes around it", "gossamer wisp-like limbs"],
+  construto: ["visible rivets and seams", "a small exposed gear on its chest", "blocky segmented joints"],
+  demonio: ["two small curved horns", "a thin barbed tail", "faintly clawed fingertips"],
+  draconico: ["small budding wing-stubs", "fine scales along its spine", "a short reptilian snout"],
+  gigante: ["oversized hands for its body", "a stocky, top-heavy build", "thick stubby limbs"],
+  geleia: ["a soft translucent gelatinous body", "a wobbly semi-transparent form", "a rounded droplet-like shape"],
+  humanoide: ["a small rounded head with simple features", "short stubby limbs", "a compact upright posture"],
+};

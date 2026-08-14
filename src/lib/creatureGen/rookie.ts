@@ -2,8 +2,8 @@ import { hashString, mulberry32, pick } from "../rng";
 import { OracleAxes } from "../oracle/types";
 import { BestiaryCreature } from "../bestiary/seed";
 import {
-  ADJECTIVES_BY_ELEMENT, ADJECTIVES_BY_ROLE, ALIGNMENT_ACCENT,
-  ELEMENT_PALETTES, LText, NOUNS_BY_ELEMENT, ROOKIE_LOOK,
+  ADJECTIVES_BY_ELEMENT, ADJECTIVES_BY_ROLE, ALIGNMENT_ACCENT, BODY_PLANS,
+  ELEMENT_PALETTES, FAMILIA_FEATURES, LText, NOUNS_BY_ELEMENT, ROOKIE_LOOK,
 } from "./wordbanks";
 
 /**
@@ -79,8 +79,19 @@ export function generateRookieCreature(
     en: `${name} was born from the archetype of the ${archetype.phrase.en}, inspired by the bestiary's ${bestiaryPick.nome}. Rookie form: small and simple, but already ${adjElement.en}. Role: ${oracle.dominantRole}. Alignment: ${oracle.dominantAlignment}.`,
   };
 
+  // The creature-definition part of the prompt (concept) is built from real,
+  // specific ingredients instead of a generic "X-like creature" label: a
+  // body-plan silhouette, a concrete visual feature drawn from the bestiary
+  // pick's own family (so "inspired by" shows up as an actual trait, not
+  // just a name-drop in the bio text), and the archetype phrase. The STYLE
+  // block below (pixel-art, no shading, flat colors) is untouched — only the
+  // part that defines what the creature actually looks like changed.
+  const bodyPlan = pick(rng, BODY_PLANS);
+  const feature = pick(rng, FAMILIA_FEATURES[bestiaryPick.familia] ?? FAMILIA_FEATURES.besta);
+  const concept = `${noun.en}-inspired creature with a ${bodyPlan} and ${feature}, ${archetype.phrase.en}`;
+
   const imagePrompt = composeSpritePrompt({
-    concept: `${noun.en}-like creature, ${archetype.phrase.en}`,
+    concept,
     colorDesc,
     accent,
     levelBlock,
