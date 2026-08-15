@@ -290,7 +290,7 @@ peças acima a um resultado concreto:
    em vez de ser um sorteio independente.
 2. **Companheiro inicial**: a fórmula real de captura do class-system
    (`poderCaptura`/`avaliarCaptura`, copiada de `evocacao.ts`) roda contra o
-   registro próprio de 34 criaturas do class-system (`criaturas.ts`, também
+   registro próprio de 32 criaturas do class-system (`criaturas.ts`, também
    copiado — inclui as 3 famílias `gigante`/`geleia`/`humanoide` adicionadas
    ao registro do class-system, cada uma com 2 criaturas capturáveis), então a
    ficha só "pega" uma criatura se realmente tiver afinidade elemental e

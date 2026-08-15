@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildFicha, FICHA_STAGE_ORDER, ROOKIE_BUDGET, STAGE_MULTIPLIER } from "./buildSheet";
 import { generateOracleAxes, OracleInputs } from "../oracle/generate";
-import { avaliarCaptura, capturableCreatures } from "./capture";
+import { avaliarCaptura, capturableCreatures, selectCompanion } from "./capture";
 import { CRIATURAS } from "./creatures";
 
 const neutral: OracleInputs = {
@@ -170,4 +170,60 @@ test("every escola and every recurso is reachable by some role/alignment profile
   }
   assert.ok(escolaSeen.has("maldicao"), `escolas seen: ${[...escolaSeen]}`);
   assert.ok(recursoSeen.has("soullink"), `recursos seen: ${[...recursoSeen]}`);
+});
+
+test("every one of the 6 professions is reachable across a spread of profiles/seeds (regression: joalheiro/artesao were never picked)", () => {
+  const profiles: Partial<typeof neutral.traits>[] = [
+    { extraversion: 95 }, // fisico -> furia -> ferreiro
+    { conscientiousness: 95, neuroticism: 5 }, // tanque -> soullink -> alquimista
+    { openness: 95 }, // magico -> mana -> artesao
+    { agreeableness: 95 }, // suporte -> fe -> tecelao
+  ];
+  const seen = new Set<string>();
+  for (const traits of profiles) {
+    const axes = generateOracleAxes({ ...neutral, traits: { ...neutral.traits, ...traits } });
+    for (let i = 0; i < 40; i++) {
+      const ficha = buildFicha("Teste", axes, "rookie", `user-${i}`);
+      for (const p of Object.keys(ficha.profissoes)) seen.add(p);
+    }
+  }
+  const ALL: string[] = ["ferreiro", "tecelao", "artesao", "joalheiro", "alquimista", "curtidor"];
+  for (const p of ALL) assert.ok(seen.has(p), `${p} never picked; seen: ${[...seen]}`);
+});
+
+test("profissao is a seeded pick, not always the single top scorer (regression: ferreiro won ~80% of profiles)", () => {
+  const axes = generateOracleAxes(neutral);
+  const picks = new Set<string>();
+  for (let i = 0; i < 30; i++) {
+    picks.add(Object.keys(buildFicha("Teste", axes, "rookie", `seed-${i}`).profissoes)[0]);
+  }
+  assert.ok(picks.size > 1, `expected more than one distinct profession across 30 seeds, got ${[...picks]}`);
+});
+
+test("a fisico-dominant (furia) build picks ferreiro much more often than a random 1-in-6 baseline", () => {
+  const axes = generateOracleAxes({ ...neutral, traits: { ...neutral.traits, extraversion: 95 } });
+  assert.equal(axes.dominantRole, "fisico");
+  let ferreiroCount = 0;
+  const N = 40;
+  for (let i = 0; i < N; i++) {
+    const ficha = buildFicha("Teste", axes, "rookie", `seed-${i}`);
+    if (ficha.profissoes.ferreiro) ferreiroCount++;
+  }
+  assert.ok(ferreiroCount / N > 0.5, `expected ferreiro to dominate a furia build, got ${ferreiroCount}/${N}`);
+});
+
+test("companion capture is a seeded pick across the capturable pool, not always the single strongest catch", () => {
+  const axes = generateOracleAxes({
+    ...neutral,
+    traits: { ...neutral.traits, extraversion: 90, conscientiousness: 80 },
+    astrologyElements: { fogo: 20, terra: 10, ar: 3, água: 3 },
+  });
+  const ficha = buildFicha("Teste", axes);
+  const catches = capturableCreatures(ficha, CRIATURAS);
+  if (catches.length < 2) return; // nothing to vary between for this profile
+  const picks = new Set<string>();
+  for (let i = 0; i < 20; i++) {
+    picks.add(selectCompanion(ficha, CRIATURAS, `seed-${i}`)!.criatura.nome);
+  }
+  assert.ok(picks.size > 1, `expected more than one distinct companion across 20 seeds, got ${[...picks]}`);
 });

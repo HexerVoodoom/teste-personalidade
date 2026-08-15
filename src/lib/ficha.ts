@@ -1,5 +1,5 @@
 import { buildFicha, FICHA_STAGE_ORDER, FichaStage } from "./classSystem/buildSheet";
-import { capturableCreatures, CapturaAvaliacao } from "./classSystem/capture";
+import { CapturaAvaliacao, selectCompanion } from "./classSystem/capture";
 import { CRIATURAS } from "./classSystem/creatures";
 import { Ficha } from "./classSystem/types";
 import { selectBestiaryCreature, BestiaryMatch } from "./bestiary/select";
@@ -39,12 +39,11 @@ export function buildCreatureFicha(profile: SoulProfile): CreatureFicha {
   ].join("|");
 
   const fichaByStage = Object.fromEntries(
-    FICHA_STAGE_ORDER.map((stage) => [stage, buildFicha(profile.onboarding.fullName, profile.oracle, stage)])
+    FICHA_STAGE_ORDER.map((stage) => [stage, buildFicha(profile.onboarding.fullName, profile.oracle, stage, seedKey)])
   ) as Record<FichaStage, Ficha>;
   const ficha = fichaByStage.rookie;
 
-  const catches = capturableCreatures(ficha, CRIATURAS);
-  const starterCompanion = catches.length > 0 ? catches[0] : null;
+  const starterCompanion = selectCompanion(ficha, CRIATURAS, seedKey);
 
   const bestiaryPick = selectBestiaryCreature(profile.oracle, seedKey);
   const rookie = generateRookieCreature(profile.oracle, bestiaryPick.creature, seedKey);

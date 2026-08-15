@@ -1,5 +1,6 @@
 import { CriaturaDef } from "./types";
 import { Ficha } from "./types";
+import { hashString, mulberry32, pick } from "../rng";
 
 /**
  * Capture formula, copied verbatim from
@@ -41,4 +42,25 @@ export function capturableCreatures(ficha: Ficha, registry: Record<string, Criat
     .map((cr) => avaliarCaptura(ficha, cr))
     .filter((a) => a.capturavel)
     .sort((a, b) => b.criatura.poderBase - a.criatura.poderBase);
+}
+
+/**
+ * Picks the sheet's starter companion from every creature it can legally
+ * capture today — a seeded pick across the whole capturable pool, not
+ * always `capturableCreatures()[0]` (the single strongest catch). Always
+ * returning the strongest meant that, out of the class-system's 32-creature
+ * registry, only 9 ever actually showed up as anyone's companion across a
+ * simulated spread of profiles: whichever creature had the highest
+ * `poderBase` within each affinity cluster permanently overshadowed every
+ * weaker creature sharing that same affinity. Deterministic per `seedKey`.
+ */
+export function selectCompanion(
+  ficha: Ficha,
+  registry: Record<string, CriaturaDef>,
+  seedKey: string
+): CapturaAvaliacao | null {
+  const catches = capturableCreatures(ficha, registry);
+  if (catches.length === 0) return null;
+  const rng = mulberry32(hashString(`${seedKey}|companion`));
+  return pick(rng, catches);
 }

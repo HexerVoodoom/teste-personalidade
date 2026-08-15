@@ -2,6 +2,7 @@ import { OracleAxes, RoleId } from "../oracle/types";
 import { CLASS_ELEMENT_ORDER } from "../oracle/types";
 import { ELEMENTO_BASE_ORDER, ElementoBaseId, EscolaId, Ficha, ProfissaoId, RecursoId, StarterTalentoId } from "./types";
 import { PROFISSOES } from "./profissoes";
+import { hashString, mulberry32, pick } from "../rng";
 
 /**
  * class-system has no fixed starting point budget in its source (it's an
@@ -144,9 +145,11 @@ function apportion<K extends string>(shares: Record<K, number>, order: K[], tota
 }
 
 /** Builds a `Ficha` at the given evolution stage from the oracle's axes
- *  (defaults to "rookie"). Deterministic — the same profile+stage always
- *  yields the same sheet; nothing here is randomized. */
-export function buildFicha(nome: string, oracle: OracleAxes, stage: FichaStage = "rookie"): Ficha {
+ *  (defaults to "rookie"). Deterministic for a given `seedKey` (falls back
+ *  to `nome` if none is given) — the same person+stage always yields the
+ *  same sheet, but which exact profession comes out of a tied/near-tied
+ *  field is a seeded pick from a pool, not always the single top scorer. */
+export function buildFicha(nome: string, oracle: OracleAxes, stage: FichaStage = "rookie", seedKey: string = nome): Ficha {
   const budget = budgetForStage(stage);
 
   const elementoShares = Object.fromEntries(
@@ -194,7 +197,7 @@ export function buildFicha(nome: string, oracle: OracleAxes, stage: FichaStage =
   const talentos = allocateTalentos(dominantRole, budget.talentoRanks);
 
   const profissoes: Partial<Record<ProfissaoId, number>> = {
-    [pickProfissao(elementos, escolas)]: budget.profissao,
+    [pickProfissao(elementos, escolas, recursos, talentos, seedKey)]: budget.profissao,
   };
 
   return {
@@ -251,33 +254,70 @@ function allocateTalentos(dominantRole: RoleId, budget: number): Partial<Record<
 }
 
 /**
- * Picks the profession whose `fatoresElementos`/`fatoresEscolas` weights
- * best match the points this sheet already invested — a ferreiro sheet
- * (vigor/marcial/fogo/terra + combate_fisico) doesn't need a separate
- * "personality → profession" mapping; it falls out of the same elementos/
- * escolas the rest of the sheet already committed to, so professions stay
- * interlinked with the rest of the build instead of being a random pick.
- * Ties break on `PROFISSOES`' declaration order (deterministic).
+ * A profession's `fatoresElementos`/`fatoresEscolas` alone made 2 of the 6
+ * professions (joalheiro, artesao) unreachable in practice — both lean on
+ * class-system elements (`tempo`, `gravidade`, `espaco`, `eletricidade`)
+ * that this project's oracle can't ground in real signal yet (see
+ * `generate.ts`'s `classElements` comment) and are always near-floor, so
+ * argmax against elemento overlap alone never picked them. And even among
+ * the reachable ones, pure argmax made `ferreiro` win ~80% of profiles —
+ * exactly the kind of narrow convergence the elemento/pixel-art fixes
+ * elsewhere in this file were about avoiding.
+ *
+ * Each profession instead gets one distinct, thematically-motivated
+ * synergy: a specific recurso (or, since there's one more profession than
+ * recurso, a talento for the leftover one) that makes it MUCH more likely
+ * when the sheet's build actually resonates with that profession's
+ * identity, not just its raw elemento overlap. The user's own example —
+ * "ferreiro combina com fúria" (a smith who works their craft in
+ * battle-fury) — is exactly `RECURSO_SYNERGY.ferreiro`.
+ */
+const RECURSO_SYNERGY: Partial<Record<ProfissaoId, RecursoId>> = {
+  ferreiro: "furia", // arma temperada em fúria de batalha
+  tecelao: "fe", // tece mantos abençoados
+  artesao: "mana", // engenhocas movidas a energia arcana
+  joalheiro: "ressonancia", // gemas que amplificam a cada uso
+  alquimista: "soullink", // alquimia de sangue, paga com a própria vida
+};
+const TALENTO_SYNERGY: Partial<Record<ProfissaoId, StarterTalentoId>> = {
+  curtidor: "persistencia", // curtume que dura, o único sem recurso próprio
+  ferreiro: "impacto_imediato", // arma que golpeia com força bruta imediata
+};
+const SYNERGY_BONUS = 20;
+
+/**
+ * Scores every profession — a small (dampened) thematic-fit term from
+ * `fatoresElementos`/`fatoresEscolas`, plus a large synergy bonus when the
+ * sheet's recurso/talento specifically resonates with that profession —
+ * then does a seeded pick from the band within `SYNERGY_BONUS` of the top
+ * score (same "coherent but with a random factor" pattern used for the
+ * bestiary pick and companion capture), instead of always the single top
+ * scorer. Deterministic per `seedKey`.
  */
 function pickProfissao(
   elementos: Partial<Record<ElementoBaseId, number>>,
-  escolas: Partial<Record<EscolaId, number>>
+  escolas: Partial<Record<EscolaId, number>>,
+  recursos: Partial<Record<RecursoId, number>>,
+  talentos: Partial<Record<StarterTalentoId, number>>,
+  seedKey: string
 ): ProfissaoId {
-  let best: ProfissaoId | null = null;
-  let bestScore = -Infinity;
-  for (const def of Object.values(PROFISSOES)) {
+  const scored = Object.values(PROFISSOES).map((def) => {
     let score = 0;
     for (const [el, peso] of Object.entries(def.fatoresElementos)) {
-      score += (elementos[el as ElementoBaseId] ?? 0) * (peso ?? 0);
+      score += (elementos[el as ElementoBaseId] ?? 0) * (peso ?? 0) * 0.3;
     }
     for (const [esc, peso] of Object.entries(def.fatoresEscolas ?? {})) {
-      score += (escolas[esc as EscolaId] ?? 0) * (peso ?? 0);
+      score += (escolas[esc as EscolaId] ?? 0) * (peso ?? 0) * 0.3;
     }
-    if (score > bestScore) {
-      bestScore = score;
-      best = def.id;
-    }
-  }
-  // Only reachable if PROFISSOES is ever empty, which it isn't.
-  return best!;
+    const synergyRecurso = RECURSO_SYNERGY[def.id];
+    if (synergyRecurso && (recursos[synergyRecurso] ?? 0) > 0) score += SYNERGY_BONUS;
+    const synergyTalento = TALENTO_SYNERGY[def.id];
+    if (synergyTalento && (talentos[synergyTalento] ?? 0) > 0) score += SYNERGY_BONUS;
+    return { id: def.id, score };
+  });
+
+  const bestScore = Math.max(...scored.map((s) => s.score));
+  const band = scored.filter((s) => s.score >= bestScore - SYNERGY_BONUS);
+  const rng = mulberry32(hashString(`${seedKey}|profissao`));
+  return pick(rng, band).id;
 }

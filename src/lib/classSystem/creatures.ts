@@ -2,7 +2,7 @@ import { CriaturaDef, ElementoBaseId, FamiliaCriatura } from "./types";
 
 /**
  * Copied verbatim from `class-system/src/registry/criaturas.ts` — the
- * class-system's own small (34-entry), mechanically-real capturable-creature
+ * class-system's own small (32-entry), mechanically-real capturable-creature
  * registry, distinct from the large external besti-rio- bestiary. This is
  * the registry `poderCaptura`/`avaliarCaptura` (in `./capture.ts`) actually
  * operate against.
