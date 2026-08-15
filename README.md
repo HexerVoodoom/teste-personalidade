@@ -3,6 +3,26 @@
 Primeira etapa do projeto Soulmon: o teste que gera o perfil que mais tarde vai
 alimentar o bestiário e o class-system para criar a criatura do usuário.
 
+> ## ⚠️ O oráculo MUDOU DE CASA
+>
+> O motor deste projeto — teste psicométrico, mapa astral, numerologia e a
+> derivação dos eixos (`src/lib/personality`, `astrology`, `numerology`,
+> `onboarding/cities`, `oracle`) — foi portado para o Soulmon, em
+> `src/utils/soulProfile/`, e **é lá que ele roda de verdade agora**: o ritual
+> de nascimento e a página do Oráculo do app usam esse motor. Ver
+> `Soulmon/docs/ORACULO.md`.
+>
+> **A partir daí, o Soulmon é a fonte da verdade do oráculo.** Mudou uma regra
+> de leitura (item do teste, coeficiente de eixo, cálculo do mapa)? Muda **lá**,
+> e só depois traz para cá se este protótipo precisar. Regra copiada é regra que
+> diverge em silêncio — e aqui existem duas cópias, então a disciplina é a única
+> coisa que as mantém iguais.
+>
+> O que continua sendo trabalho DESTE repositório: a ponte com o class-system e
+> o bestiário (`src/lib/classSystem`, `bestiary`, `creatureGen`, `ficha.ts`) —
+> ficha de personagem, captura, seleção de criatura. Isso o Soulmon não
+> consome.
+
 Gera três camadas a partir de um onboarding curto e de 20 itens:
 
 - **Perfil psicométrico** — Big Five + Honestidade-Humildade (HEXACO), com
@@ -90,10 +110,15 @@ avisado.
 
 ## Próximo passo
 
+- ~~Amadurecer o oráculo até ele poder substituir de fato o `oracle.ts` do
+  Soulmon~~ — **feito**: o motor foi portado para
+  `Soulmon/src/utils/soulProfile/` e substituiu a metade "leitura" do
+  `oracle.ts` (signo por faixa de datas, ascendente chutado pela hora,
+  horóscopo chinês/védico e as 6 perguntas do quiz). A metade criativa
+  (arquétipo, famílias, as 11 formas, prompts de sprite) continua no
+  `oracle.ts` e não foi tocada.
 - Corrigir o bestiário (`besti-rio-`): tags erradas e descrições poluídas,
   num repositório separado.
-- Amadurecer o oráculo até ele poder substituir de fato o `oracle.ts` do
-  Soulmon (hoje ele já produz o mesmo formato de saída, mas ainda vive
-  aqui).
 - Ligar `oracle.classElements` (os 17 elementos do class-system) a uma API de
-  distribuição real, em vez de só expor os escores.
+  distribuição real, em vez de só expor os escores. **Este é o trabalho que
+  sobra aqui** — o Soulmon não consome os elementos do class-system.

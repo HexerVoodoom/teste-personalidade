@@ -192,9 +192,30 @@ class-system, onboarding) foram lidos. Achados relevantes:
   (`investirElemento`/`investirEscola`/…) — mas nenhuma lógica automática que
   receba um input externo e distribua pontos sozinha.
 
-Por decisão explícita: este projeto vai **substituir** o `oracle.ts` do
-Soulmon, mas até esse novo oráculo estar pronto ele permanece aqui, não é
-movido para o repositório do Soulmon.
+Por decisão explícita: este projeto ia **substituir** o `oracle.ts` do Soulmon,
+e permaneceria aqui até estar pronto.
+
+**Isso aconteceu.** O motor foi portado para `Soulmon/src/utils/soulProfile/` e
+substituiu a metade "leitura" do `oracle.ts` — signo solar por faixa de datas,
+ascendente aproximado pela hora, horóscopo chinês/védico, os 4 números e as 6
+perguntas do quiz. A metade "criação" (arquétipo, famílias, fusão, as 11 formas,
+prompts de sprite) não foi tocada: `OracleInput` ganhou um campo opcional
+`soulProfile` e, quando ele existe, os 4 eixos vêm daqui; quando não existe, o
+caminho legado roda inteiro, que é o que mantém funcionando o perfil de quem já
+jogava. Ver `Soulmon/docs/ORACULO.md`.
+
+Duas mudanças foram feitas na travessia, e valem registro porque melhoram os
+dois lados:
+
+- **As tabelas de afinidade não foram copiadas.** `NUMBER_ELEMENTS`,
+  `NUMBER_ROLES`, `NUMBER_ALIGNMENT`, `ROLE_ALIGNMENT` e `REALM_WEIGHTS` são
+  importadas do `oracle.ts` no Soulmon, em vez de existirem em duas cópias.
+- **`REALM_WEIGHTS` foi rebalanceada no Soulmon também** (cada reino somando 6),
+  que é a correção que este projeto já tinha feito na sua cópia. Sem ela o
+  oceano era inalcançável.
+
+A partir daqui, **o Soulmon é a fonte da verdade do oráculo**; este repositório
+segue como laboratório da ponte com o class-system e o bestiário.
 
 ### O que o oráculo faz
 
