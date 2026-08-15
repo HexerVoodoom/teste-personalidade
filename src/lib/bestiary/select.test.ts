@@ -50,6 +50,29 @@ test("different seed keys can select different creatures from the same band", ()
   assert.ok(names.size > 1, "expected the random factor to produce more than one outcome across 30 people");
 });
 
+test("every familia in the pool is reachable, including ignea/geleia (regression: ignea was missing from REALM_TO_FAMILIAS and never picked)", () => {
+  let seed = 24680;
+  const nextRand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const familiasInPool = new Set(BESTIARY_SEED.map((c) => c.familia));
+  const seen = new Set<string>();
+  for (let i = 0; i < 1500; i++) {
+    const axes = generateOracleAxes({
+      traits: {
+        openness: nextRand() * 100, conscientiousness: nextRand() * 100, extraversion: nextRand() * 100,
+        agreeableness: nextRand() * 100, neuroticism: nextRand() * 100, honestyHumility: nextRand() * 100,
+      },
+      jung: { EI: nextRand() * 100, SN: nextRand() * 100, TF: nextRand() * 100, JP: nextRand() * 100 },
+      astrologyElements: { fogo: nextRand() * 30, terra: nextRand() * 30, ar: nextRand() * 30, água: nextRand() * 30 },
+      astrologyPolarities: { diurno: nextRand() * 10, noturno: nextRand() * 10 },
+      numerologyNumbers: [1 + Math.floor(nextRand() * 9)],
+    });
+    seen.add(selectBestiaryCreature(axes, `familia-seed-${i}`).creature.familia);
+  }
+  for (const familia of familiasInPool) {
+    assert.ok(seen.has(familia), `familia "${familia}" was never picked across 500 profiles`);
+  }
+});
+
 test("hostility band tracks alignment: benevolência skews toward gentler creatures", () => {
   const kindAxes = generateOracleAxes({ ...neutral, traits: { ...neutral.traits, agreeableness: 95, extraversion: 5 } });
   const fierceAxes = generateOracleAxes({ ...neutral, traits: { ...neutral.traits, extraversion: 95, honestyHumility: 5 } });

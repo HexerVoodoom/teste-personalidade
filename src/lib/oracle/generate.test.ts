@@ -186,3 +186,54 @@ test("no single realm dominates a spread of varied, randomized-ish profiles (reg
   const maxShare = Math.max(...Object.values(realmCounts)) / N;
   assert.ok(maxShare < 0.4, `a single realm won ${Math.round(maxShare * 100)}% of profiles: ${JSON.stringify(realmCounts)}`);
 });
+
+test("every element/role/alignment/realm is reachable, and none dominates, across a wide randomized sweep (QA round 1)", () => {
+  let seed = 987654;
+  const nextRand = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+  const numeroPitagorico = () => (nextRand() < 0.08 ? [11, 22, 33][Math.floor(nextRand() * 3)] : 1 + Math.floor(nextRand() * 9));
+
+  const elementCounts: Record<string, number> = {};
+  const roleCounts: Record<string, number> = {};
+  const alignmentCounts: Record<string, number> = {};
+  const realmCounts: Record<string, number> = {};
+  const N = 1500;
+  for (let i = 0; i < N; i++) {
+    const traits = {
+      openness: nextRand() * 100, conscientiousness: nextRand() * 100, extraversion: nextRand() * 100,
+      agreeableness: nextRand() * 100, neuroticism: nextRand() * 100, honestyHumility: nextRand() * 100,
+    };
+    const inputs: OracleInputs = {
+      traits,
+      facets: {
+        "conscientiousness:organização": traits.conscientiousness,
+        "extraversion:sociabilidade": traits.extraversion,
+      },
+      jung: { EI: nextRand() * 100, SN: nextRand() * 100, TF: nextRand() * 100, JP: nextRand() * 100 },
+      astrologyElements: {
+        fogo: nextRand() * 30, terra: nextRand() * 30, ar: nextRand() * 30, água: nextRand() * 30,
+      },
+      astrologyPolarities: { diurno: nextRand() * 10, noturno: nextRand() * 10 },
+      numerologyNumbers: Array.from({ length: 6 }, numeroPitagorico),
+    };
+    const axes = generateOracleAxes(inputs);
+    elementCounts[axes.dominantElement] = (elementCounts[axes.dominantElement] ?? 0) + 1;
+    roleCounts[axes.dominantRole] = (roleCounts[axes.dominantRole] ?? 0) + 1;
+    alignmentCounts[axes.dominantAlignment] = (alignmentCounts[axes.dominantAlignment] ?? 0) + 1;
+    realmCounts[axes.dominantRealm] = (realmCounts[axes.dominantRealm] ?? 0) + 1;
+  }
+
+  function checkPool(name: string, counts: Record<string, number>, order: string[], maxShare: number) {
+    for (const key of order) {
+      const share = (counts[key] ?? 0) / N;
+      assert.ok(share > 0, `${name} "${key}" was never the dominant pick in ${N} profiles (unreachable)`);
+      assert.ok(share < maxShare, `${name} "${key}" won ${Math.round(share * 100)}% of profiles (cap ${Math.round(maxShare * 100)}%): ${JSON.stringify(counts)}`);
+    }
+  }
+  checkPool("element", elementCounts, ELEMENT_ORDER, 0.3);
+  checkPool("role", roleCounts, ROLE_ORDER, 0.35);
+  checkPool("alignment", alignmentCounts, ALIGNMENT_ORDER, 0.4);
+  checkPool("realm", realmCounts, REALM_ORDER, 0.3);
+});

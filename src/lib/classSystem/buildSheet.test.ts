@@ -173,15 +173,21 @@ test("every escola and every recurso is reachable by some role/alignment profile
 });
 
 test("every one of the 6 professions is reachable across a spread of profiles/seeds (regression: joalheiro/artesao were never picked)", () => {
-  const profiles: Partial<typeof neutral.traits>[] = [
-    { extraversion: 95 }, // fisico -> furia -> ferreiro
-    { conscientiousness: 95, neuroticism: 5 }, // tanque -> soullink -> alquimista
-    { openness: 95 }, // magico -> mana -> artesao
-    { agreeableness: 95 }, // suporte -> fe -> tecelao
+  const profiles: OracleInputs[] = [
+    { ...neutral, traits: { ...neutral.traits, extraversion: 95 } }, // fisico -> furia -> ferreiro
+    { ...neutral, traits: { ...neutral.traits, conscientiousness: 95, neuroticism: 5 } }, // tanque -> soullink -> alquimista
+    { ...neutral, traits: { ...neutral.traits, openness: 95 } }, // magico -> mana -> artesao
+    { ...neutral, traits: { ...neutral.traits, agreeableness: 95 } }, // suporte -> fe -> tecelao
+    { // alcance -> ressonancia -> joalheiro
+      ...neutral,
+      traits: { ...neutral.traits, conscientiousness: 80 },
+      jung: { ...neutral.jung, TF: 95 },
+      astrologyElements: { fogo: 1, terra: 1, ar: 30, água: 1 },
+    },
   ];
   const seen = new Set<string>();
-  for (const traits of profiles) {
-    const axes = generateOracleAxes({ ...neutral, traits: { ...neutral.traits, ...traits } });
+  for (const inputs of profiles) {
+    const axes = generateOracleAxes(inputs);
     for (let i = 0; i < 40; i++) {
       const ficha = buildFicha("Teste", axes, "rookie", `user-${i}`);
       for (const p of Object.keys(ficha.profissoes)) seen.add(p);
@@ -210,6 +216,38 @@ test("a fisico-dominant (furia) build picks ferreiro much more often than a rand
     if (ficha.profissoes.ferreiro) ferreiroCount++;
   }
   assert.ok(ferreiroCount / N > 0.5, `expected ferreiro to dominate a furia build, got ${ferreiroCount}/${N}`);
+});
+
+test("profissao is stable across every evolution stage for the same person (regression: 70/200 simulated people had it flip between rookie and ultra)", () => {
+  let seed = 55;
+  const nextRand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let i = 0; i < 40; i++) {
+    const axes = generateOracleAxes({
+      traits: {
+        openness: nextRand() * 100, conscientiousness: nextRand() * 100, extraversion: nextRand() * 100,
+        agreeableness: nextRand() * 100, neuroticism: nextRand() * 100, honestyHumility: nextRand() * 100,
+      },
+      jung: { EI: nextRand() * 100, SN: nextRand() * 100, TF: nextRand() * 100, JP: nextRand() * 100 },
+      astrologyElements: { fogo: nextRand() * 30, terra: nextRand() * 30, ar: nextRand() * 30, água: nextRand() * 30 },
+      astrologyPolarities: { diurno: nextRand() * 10, noturno: nextRand() * 10 },
+      numerologyNumbers: [1 + Math.floor(nextRand() * 9)],
+    });
+    const seedKey = `stage-stability-${i}`;
+    const picks = new Set<string>();
+    for (const stage of FICHA_STAGE_ORDER) {
+      picks.add(Object.keys(buildFicha("X", axes, stage, seedKey).profissoes)[0]);
+    }
+    assert.equal(picks.size, 1, `profissao changed across stages for person ${i}: ${[...picks]}`);
+  }
+});
+
+test("talent spillover order is a seeded pick, not always the same fixed order (regression: 20 seeds used to produce 1 identical allocation)", () => {
+  const axes = generateOracleAxes({ ...neutral, traits: { ...neutral.traits, extraversion: 90 }, astrologyElements: { fogo: 20, terra: 3, ar: 3, água: 3 } });
+  const allocations = new Set<string>();
+  for (let i = 0; i < 20; i++) {
+    allocations.add(JSON.stringify(buildFicha("Teste", axes, "ultimate", `seed-${i}`).talentos));
+  }
+  assert.ok(allocations.size > 1, `expected more than one distinct talent allocation across 20 seeds, got ${allocations.size}`);
 });
 
 test("companion capture is a seeded pick across the capturable pool, not always the single strongest catch", () => {

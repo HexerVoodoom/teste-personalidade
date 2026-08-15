@@ -35,11 +35,17 @@ const ORACLE_ELEMENT_TO_CLASS_SYSTEM: Record<ElementId, string[]> = {
   industrial: ["marcial"],
 };
 
+// besti-rio-'s corpus has 14 familias, but this table only listed 12 of
+// them — "ignea" (fire-elemental creatures) was in neither this table nor
+// any realm, so it never got the +2 realm-match score bonus and was
+// literally unreachable (0/500 in simulation, out of 8 pool entries).
+// "geleia" was also missing, though it still surfaced sometimes via the
+// element/alignment/tamanho terms alone.
 const REALM_TO_FAMILIAS: Record<RealmId, string[]> = {
-  deserto: ["besta", "aberracao"],
+  deserto: ["besta", "aberracao", "ignea"],
   picos: ["ave", "gigante", "draconico"],
-  oceano: ["aquatica"],
-  pantano: ["planta", "aberracao"],
+  oceano: ["aquatica", "geleia"],
+  pantano: ["planta", "aberracao", "geleia"],
   floresta: ["besta", "planta", "espirito"],
   cavernas: ["morto_vivo", "construto", "demonio"],
   gelo: ["besta", "espirito"],

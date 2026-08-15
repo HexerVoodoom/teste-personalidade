@@ -36,15 +36,24 @@ const NUMBER_ALIGNMENT: Record<number, AlignmentId> = {
  * and shadowy regardless of who is visiting it. This table is copied as-is
  * from Soulmon's `REALM_WEIGHTS`.
  */
+// The original (Soulmon-copied) table had every realm's weights sum to 5 or
+// 6 total "points": deserto/pantano/cavernas/akasha summed to 6, while
+// picos/floresta/gelo/campina (and oceano, worst at 4) summed to only 5 —
+// a structurally lower ceiling than their 6-point competitors regardless of
+// the person, which starved them in simulation (oceano was literally
+// unreachable at 0/2000; the rest lagged well behind). Every realm below
+// now sums to 6, so no realm has a structural edge over another baked into
+// the table itself — remaining differences in how often a realm is picked
+// should come from how common its underlying elements are, not this.
 const REALM_WEIGHTS: Record<RealmId, Partial<Record<ElementId, number>>> = {
   deserto: { fogo: 3, terra: 2, industrial: 1 },
-  picos: { ar: 3, fogo: 1, industrial: 1 },
-  oceano: { agua: 3, sombra: 1 },
+  picos: { ar: 3, fogo: 2, industrial: 1 },
+  oceano: { agua: 4, sombra: 2 },
   pantano: { agua: 2, sombra: 2, planta: 2 },
-  floresta: { planta: 3, terra: 1, agua: 1 },
+  floresta: { planta: 3, terra: 2, agua: 1 },
   cavernas: { terra: 3, sombra: 2, industrial: 1 },
-  gelo: { agua: 2, ar: 2, luz: 1 },
-  campina: { luz: 2, planta: 2, ar: 1 },
+  gelo: { agua: 3, ar: 2, luz: 1 },
+  campina: { luz: 2, planta: 2, ar: 2 },
   akasha: { luz: 3, sombra: 3 },
 };
 
@@ -129,19 +138,35 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
   // eyeballing the formulas).
   const astroTotal =
     astrologyElements.fogo + astrologyElements.terra + astrologyElements.ar + astrologyElements.água || 1;
+  // ar and terra share the same formula shape as agua/fogo, but
+  // NUMBER_ELEMENTS gives ar a primary (+6) numerology bonus at 2 of the 12
+  // numbers (3, 5) vs terra's 1 (4) — a real asymmetry in the (copied,
+  // otherwise-untouched) table that skewed ar noticeably above terra in
+  // simulation. Trait coefficients nudged to compensate rather than
+  // touching the numerology table itself.
   const elements: Record<ElementId, number> = {
     agua: (astrologyElements.água / astroTotal) * 60 + traits.agreeableness * 0.4,
     fogo: (astrologyElements.fogo / astroTotal) * 60 + traits.extraversion * 0.4,
-    terra: (astrologyElements.terra / astroTotal) * 60 + traits.conscientiousness * 0.4,
-    ar: (astrologyElements.ar / astroTotal) * 60 + traits.openness * 0.4,
-    sombra: traits.neuroticism * 0.35 + (100 - traits.honestyHumility) * 0.12 +
+    terra: (astrologyElements.terra / astroTotal) * 60 + traits.conscientiousness * 0.47,
+    ar: (astrologyElements.ar / astroTotal) * 60 + traits.openness * 0.35,
+    sombra: traits.neuroticism * 0.45 + (100 - traits.honestyHumility) * 0.15 +
       (astrologyPolarities.noturno / (astrologyPolarities.diurno + astrologyPolarities.noturno || 1)) * 12,
-    luz: traits.honestyHumility * 0.35 +
+    luz: traits.honestyHumility * 0.45 +
       (astrologyPolarities.diurno / (astrologyPolarities.diurno + astrologyPolarities.noturno || 1)) * 12 +
-      traits.agreeableness * 0.12,
+      traits.agreeableness * 0.15,
     planta: traits.agreeableness * 0.4 + facet(inputs, "conscientiousness", "persistência", traits.conscientiousness) * 0.4,
+    // This quiz only defines one facet per trait ("organização" for
+    // conscientiousness — see questions.ts), so "prudência" always falls
+    // back to the same trait.conscientiousness value "organização" is
+    // itself derived from. Stacking both terms on that one trait (0.5+0.3)
+    // gave industrial nearly double the effective single-trait weight of
+    // every other element, making it win the dominant-element argmax ~31%
+    // of the time in a 2000-profile simulation (expected ~12.5%). Mixing in
+    // jung.JP ("estrutura" — thematically the same organized/methodical
+    // signal, but a genuinely independent input) spreads that weight across
+    // two uncorrelated sources instead of double-counting one.
     industrial: facet(inputs, "conscientiousness", "organização", traits.conscientiousness) * 0.5 +
-      facet(inputs, "conscientiousness", "prudência", traits.conscientiousness) * 0.3,
+      jung.JP * 0.25,
   };
   // Primary/secondary numerology bonus (matching Soulmon's own
   // `addScore(primary, pts, ...); addScore(secondary, 1, ...)` split) —
@@ -158,11 +183,21 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
   // that drives fire/earth/air/water — Soulmon does the same via zodiac
   // element → role. Magic instead follows Openness and the Sensing↔iNtuition
   // axis (100 - SN, since SN is scored toward Sensing).
+  // "prudência" and "assertividade" aren't real facets this quiz collects
+  // (only one facet exists per trait — see questions.ts), so every use of
+  // them below always falls back to the plain trait score. That's fine
+  // where a role mixes it with unrelated signals, but suporte/tanque/fisico
+  // each leaned on a single trait at a coefficient (0.7/0.5/0.6) well above
+  // magico's largest (0.4), giving them outsized variance and making them
+  // win the dominant-role argmax far more than a 1-in-5 baseline in a
+  // 2000-profile simulation (suporte ~29%, tanque ~25%, magico ~9.5%).
+  // Coefficients rebalanced so no role's primary trait term exceeds ~0.45.
   const roles: Record<RoleId, number> = {
-    suporte: traits.agreeableness * 0.7 + (astrologyElements.água / astroTotal) * 30,
-    tanque: facet(inputs, "conscientiousness", "prudência", traits.conscientiousness) * 0.5 +
+    suporte: traits.agreeableness * 0.45 + (astrologyElements.água / astroTotal) * 30 +
+      (100 - traits.honestyHumility) * 0.1,
+    tanque: facet(inputs, "conscientiousness", "prudência", traits.conscientiousness) * 0.35 +
       (100 - traits.neuroticism) * 0.3 + (astrologyElements.terra / astroTotal) * 20,
-    fisico: facet(inputs, "extraversion", "assertividade", traits.extraversion) * 0.6 +
+    fisico: facet(inputs, "extraversion", "assertividade", traits.extraversion) * 0.55 +
       (astrologyElements.fogo / astroTotal) * 40,
     // Unlike the other 4 roles, magico has no astrology term diluting it
     // (fisico/tanque/alcance/suporte all mix in a *shared* astro-element
@@ -171,8 +206,13 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
     // (1.0) and structurally outscore every other role on average. Scaled
     // down to land in the same range (verified empirically).
     magico: traits.openness * 0.4 + (100 - jung.SN) * 0.22 + (100 - jung.JP) * 0.13,
+    // alcance's astro_ar term compounds with the elements table's own ar
+    // bump, and ar is numerology's most frequent primary/secondary target
+    // (NUMBER_ELEMENTS gives it a bonus at 3 of 12 numbers, more than any
+    // other element) — so alcance rode that same correlated signal and won
+    // the argmax disproportionately. Coefficients trimmed to compensate.
     alcance: facet(inputs, "conscientiousness", "prudência", traits.conscientiousness) * 0.4 +
-      jung.TF * 0.3 + (astrologyElements.ar / astroTotal) * 30,
+      jung.TF * 0.3 + (astrologyElements.ar / astroTotal) * 25,
   };
   for (const n of numerologyNumbers) {
     roles[NUMBER_ROLES[n]] += 4;
@@ -181,14 +221,28 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
   // ---- Alignment: dominant role leans toward its Soulmon-mapped alignment;
   // Extraversion/assertiveness reinforces Poder, low Honesty-Humility
   // (status-seeking) reinforces it further, and Openness reinforces Harmonia.
+  // ROLE_ALIGNMENT maps 2 roles to harmonia, 2 to benevolencia, but only 1
+  // (fisico) to poder — summing raw role scores gave poder roughly half the
+  // role-derived signal of the other two alignments regardless of the
+  // person, which measurably suppressed it (poder won a 2000-profile
+  // simulation's argmax ~20% of the time vs benevolencia's ~43%, for 3
+  // options with an even ~33% baseline). Averaging by how many roles feed
+  // each alignment removes that role-count asymmetry.
+  const rolesPerAlignment: Record<AlignmentId, number> = { poder: 0, harmonia: 0, benevolencia: 0 };
+  for (const role of ROLE_ORDER) rolesPerAlignment[ROLE_ALIGNMENT[role]]++;
   const alignments: Record<AlignmentId, number> = { poder: 0, harmonia: 0, benevolencia: 0 };
   for (const role of ROLE_ORDER) {
-    alignments[ROLE_ALIGNMENT[role]] += roles[role] * 0.5;
+    const target = ROLE_ALIGNMENT[role];
+    alignments[target] += (roles[role] * 0.5) / rolesPerAlignment[target];
   }
-  alignments.poder += facet(inputs, "extraversion", "assertividade", traits.extraversion) * 0.3 +
-    (100 - traits.honestyHumility) * 0.2;
+  // Poder's bonus terms (below) plus its now-undivided role term made it
+  // overshoot the other two once the role-count averaging above was added
+  // — trimmed down, and benevolencia's bonus bumped up to compensate for
+  // agreeableness being one of the "softer" (astro-diluted) role signals.
+  alignments.poder += facet(inputs, "extraversion", "assertividade", traits.extraversion) * 0.2 +
+    (100 - traits.honestyHumility) * 0.15;
   alignments.harmonia += traits.openness * 0.3;
-  alignments.benevolencia += traits.agreeableness * 0.3;
+  alignments.benevolencia += traits.agreeableness * 0.4;
   for (const n of numerologyNumbers) {
     alignments[NUMBER_ALIGNMENT[n]] += 4;
   }

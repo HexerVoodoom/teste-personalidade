@@ -194,10 +194,31 @@ export function buildFicha(nome: string, oracle: OracleAxes, stage: FichaStage =
     [ROLE_TO_RECURSO[dominantRole]]: budget.recursos,
   };
 
-  const talentos = allocateTalentos(dominantRole, budget.talentoRanks);
+  const talentos = allocateTalentos(dominantRole, budget.talentoRanks, seedKey);
+
+  // Profession should read like a stable trait a person grows into, not
+  // something that can re-roll as their sheet gets bigger — the same
+  // reasoning that already keeps the starter companion fixed across stages
+  // (see `ficha.ts`). But pickProfissao's inputs weren't stage-stable:
+  // elementos/escolas grow up to 8x (STAGE_MULTIPLIER) with rounding that
+  // doesn't scale perfectly linearly, and a bigger talent budget reaches
+  // further down the (now seed-shuffled) spillover list, so a synergy
+  // talent like curtidor's `persistencia` can gain ranks at "ultra" that it
+  // never got at "rookie". Simulation confirmed this was a real, frequent
+  // problem — 35% of people (70/200) had their profissão flip somewhere
+  // between rookie and ultra, even after scaling SYNERGY_BONUS with the
+  // stage. Deciding the profession once, from the rookie-scale allocation,
+  // and reusing that decision at every later stage removes the instability
+  // at its source instead of chasing each stage-scaling side effect.
+  const rookieBudget = stage === "rookie" ? budget : budgetForStage("rookie");
+  const rookieElementos = stage === "rookie" ? elementos : apportion(elementoShares, ELEMENTO_BASE_ORDER, rookieBudget.elementos);
+  const rookieDistributedEscolas = stage === "rookie" ? distributedEscolas : apportion(roleEscolaShares, [...DISTRIBUTED_ESCOLAS], rookieBudget.escolasDistribuidas);
+  const rookieEscolas: Partial<Record<EscolaId, number>> = { evocacao: rookieBudget.evocacaoFixo, ...rookieDistributedEscolas };
+  const rookieRecursos: Partial<Record<RecursoId, number>> = { [ROLE_TO_RECURSO[dominantRole]]: rookieBudget.recursos };
+  const rookieTalentos = stage === "rookie" ? talentos : allocateTalentos(dominantRole, rookieBudget.talentoRanks, seedKey);
 
   const profissoes: Partial<Record<ProfissaoId, number>> = {
-    [pickProfissao(elementos, escolas, recursos, talentos, seedKey)]: budget.profissao,
+    [pickProfissao(rookieElementos, rookieEscolas, rookieRecursos, rookieTalentos, seedKey)]: budget.profissao,
   };
 
   return {
@@ -222,18 +243,30 @@ export function buildFicha(nome: string, oracle: OracleAxes, stage: FichaStage =
  * always landing exactly 1 rank on exactly 2 of them regardless of how much
  * budget is available. The role's own 2 thematic talents (`ROLE_TO_TALENTOS`)
  * fill first — up to their `ranksMaximos` cap — then any leftover budget
- * spreads across the rest of the 8, in a fixed deterministic order, always
- * respecting each talent's own rank cap and skipping the loser of the
- * impacto_imediato/dano_ao_longo_do_tempo exclusive pair once the winner
- * (from the role's own picks, or the fixed order as a tie-break) is chosen.
+ * spreads across the rest of the 8, always respecting each talent's own rank
+ * cap and skipping the loser of the impacto_imediato/dano_ao_longo_do_tempo
+ * exclusive pair once the winner (from the role's own picks, or the
+ * shuffled spillover order as a tie-break) is chosen.
+ *
+ * The spillover order used to be a fixed constant order, so every sheet
+ * sharing a dominant role got byte-identical talent allocations regardless
+ * of `seedKey` — confirmed via simulation: 20 different seeds on the same
+ * axes produced exactly 1 distinct talent allocation. Shuffling that
+ * spillover order with the seed (role's own 2 thematic talents still always
+ * fill first, since that priority is a real synergy, not noise) gives every
+ * sheet a chance at a different spillover mix at higher stages.
  */
-function allocateTalentos(dominantRole: RoleId, budget: number): Partial<Record<StarterTalentoId, number>> {
-  const priority: StarterTalentoId[] = [
-    ...ROLE_TO_TALENTOS[dominantRole],
-    ...(Object.keys(STARTER_TALENTO_CAPS) as StarterTalentoId[]).filter(
-      (t) => !ROLE_TO_TALENTOS[dominantRole].includes(t)
-    ),
-  ];
+function allocateTalentos(dominantRole: RoleId, budget: number, seedKey: string): Partial<Record<StarterTalentoId, number>> {
+  const rest = (Object.keys(STARTER_TALENTO_CAPS) as StarterTalentoId[]).filter(
+    (t) => !ROLE_TO_TALENTOS[dominantRole].includes(t)
+  );
+  const rng = mulberry32(hashString(`${seedKey}|talentos`));
+  const shuffledRest = [...rest];
+  for (let i = shuffledRest.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffledRest[i], shuffledRest[j]] = [shuffledRest[j], shuffledRest[i]];
+  }
+  const priority: StarterTalentoId[] = [...ROLE_TO_TALENTOS[dominantRole], ...shuffledRest];
 
   const talentos: Partial<Record<StarterTalentoId, number>> = {};
   let excluded: StarterTalentoId | null = null;
