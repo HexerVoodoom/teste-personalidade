@@ -7,6 +7,7 @@ import {
   RoleId, ROLE_ORDER,
 } from "./types";
 import { computeDominantClassElements } from "./derivedElements";
+import { hashString } from "../rng";
 
 /**
  * Numerology → element/role/alignment affinity tables, copied from
@@ -114,6 +115,18 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
   // the four elements it shares a name with; traits add a secondary nudge
   // that lets someone whose astrology reads mostly "terra" still register as
   // meaningfully more or less curious/organized than another "terra" person.
+  // NB: agua/fogo/terra/ar share a single 60-point astrology pool between
+  // the 4 of them (averaging ~15 each, not 60), while sombra/luz/planta/
+  // industrial each draw on their own independent, non-shared trait terms.
+  // sombra/luz used to also stack a polarity bonus (up to 20) on top of a
+  // full-weight trait term (up to 60), giving them a structurally higher
+  // ceiling and average than every other element — which, combined with
+  // `akasha`'s realm weight being exactly `{ luz: 3, sombra: 3 }` (the only
+  // realm that double-weights two elements at full weight instead of one),
+  // made `akasha` win an outsized share of profiles regardless of the
+  // actual person. Coefficients below are tuned so every element's expected
+  // value lands in the same ~25-40 range (verified empirically, not just by
+  // eyeballing the formulas).
   const astroTotal =
     astrologyElements.fogo + astrologyElements.terra + astrologyElements.ar + astrologyElements.água || 1;
   const elements: Record<ElementId, number> = {
@@ -121,17 +134,24 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
     fogo: (astrologyElements.fogo / astroTotal) * 60 + traits.extraversion * 0.4,
     terra: (astrologyElements.terra / astroTotal) * 60 + traits.conscientiousness * 0.4,
     ar: (astrologyElements.ar / astroTotal) * 60 + traits.openness * 0.4,
-    sombra: traits.neuroticism * 0.6 + (100 - traits.honestyHumility) * 0.2 +
-      (astrologyPolarities.noturno / (astrologyPolarities.diurno + astrologyPolarities.noturno || 1)) * 20,
-    luz: traits.honestyHumility * 0.6 +
-      (astrologyPolarities.diurno / (astrologyPolarities.diurno + astrologyPolarities.noturno || 1)) * 20 +
-      traits.agreeableness * 0.2,
+    sombra: traits.neuroticism * 0.35 + (100 - traits.honestyHumility) * 0.12 +
+      (astrologyPolarities.noturno / (astrologyPolarities.diurno + astrologyPolarities.noturno || 1)) * 12,
+    luz: traits.honestyHumility * 0.35 +
+      (astrologyPolarities.diurno / (astrologyPolarities.diurno + astrologyPolarities.noturno || 1)) * 12 +
+      traits.agreeableness * 0.12,
     planta: traits.agreeableness * 0.4 + facet(inputs, "conscientiousness", "persistência", traits.conscientiousness) * 0.4,
     industrial: facet(inputs, "conscientiousness", "organização", traits.conscientiousness) * 0.5 +
       facet(inputs, "conscientiousness", "prudência", traits.conscientiousness) * 0.3,
   };
+  // Primary/secondary numerology bonus (matching Soulmon's own
+  // `addScore(primary, pts, ...); addScore(secondary, 1, ...)` split) —
+  // giving both elements the full +6 made "luz" (the primary OR secondary
+  // element for 6 of the 12 numerology numbers, double any other element's
+  // count) even more disproportionately likely to dominate.
   for (const n of numerologyNumbers) {
-    for (const el of NUMBER_ELEMENTS[n] ?? []) elements[el] += 6;
+    const [primary, secondary] = NUMBER_ELEMENTS[n] ?? [];
+    if (primary) elements[primary] += 6;
+    if (secondary) elements[secondary] += 1;
   }
 
   // ---- Roles: physical/tank/ranged reuse the same astrology element split
@@ -144,7 +164,13 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
       (100 - traits.neuroticism) * 0.3 + (astrologyElements.terra / astroTotal) * 20,
     fisico: facet(inputs, "extraversion", "assertividade", traits.extraversion) * 0.6 +
       (astrologyElements.fogo / astroTotal) * 40,
-    magico: traits.openness * 0.5 + (100 - jung.SN) * 0.3 + (100 - jung.JP) * 0.2,
+    // Unlike the other 4 roles, magico has no astrology term diluting it
+    // (fisico/tanque/alcance/suporte all mix in a *shared* astro-element
+    // share, which averages far below its own max since it's split 4 ways)
+    // -- so its 3 independent trait/jung terms used to sum to full weight
+    // (1.0) and structurally outscore every other role on average. Scaled
+    // down to land in the same range (verified empirically).
+    magico: traits.openness * 0.4 + (100 - jung.SN) * 0.22 + (100 - jung.JP) * 0.13,
     alcance: facet(inputs, "conscientiousness", "prudência", traits.conscientiousness) * 0.4 +
       jung.TF * 0.3 + (astrologyElements.ar / astroTotal) * 30,
   };
@@ -167,15 +193,21 @@ export function generateOracleAxes(inputs: OracleInputs): OracleAxes {
     alignments[NUMBER_ALIGNMENT[n]] += 4;
   }
 
-  // ---- Realms: pure function of the element scores, via Soulmon's own
-  // world-geography weight table.
+  // ---- Realms: element scores via Soulmon's own world-geography weight
+  // table, plus the same kind of small deterministic per-person "signature"
+  // term Soulmon itself adds (`hashString(...) % 4`) — without it, everyone
+  // whose element scores land in a similar shape (common, since several
+  // realms share weighted elements) converges on the exact same realm every
+  // time; the signature breaks that without making the result any less
+  // deterministic for a given person.
+  const inputKey = JSON.stringify(inputs);
   const realms: Record<RealmId, number> = Object.fromEntries(
     REALM_ORDER.map((realm) => {
       const score = Object.entries(REALM_WEIGHTS[realm]).reduce(
         (sum, [el, weight]) => sum + weight! * elements[el as ElementId],
         0
       );
-      return [realm, score];
+      return [realm, score + (hashString(`${inputKey}|${realm}`) % 4)];
     })
   ) as Record<RealmId, number>;
 

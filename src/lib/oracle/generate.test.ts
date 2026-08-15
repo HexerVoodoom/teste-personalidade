@@ -155,3 +155,34 @@ test("realm scores are a deterministic function of the element scores", () => {
   const waterHeavy = generateOracleAxes({ ...neutral, astrologyElements: { fogo: 1, terra: 1, ar: 1, água: 30 } });
   assert.ok(waterHeavy.realms.oceano > fireHeavy.realms.oceano);
 });
+
+test("no single realm dominates a spread of varied, randomized-ish profiles (regression: akasha used to win ~80% of the time)", () => {
+  // Deterministic pseudo-random sweep, not Math.random() -- keeps the test
+  // reproducible while still exercising a wide variety of trait/astro/
+  // numerology combinations, the same way real random profiles would.
+  let seed = 12345;
+  const nextRand = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+  const realmCounts: Record<string, number> = {};
+  const N = 200;
+  for (let i = 0; i < N; i++) {
+    const inputs: OracleInputs = {
+      traits: {
+        openness: nextRand() * 100, conscientiousness: nextRand() * 100, extraversion: nextRand() * 100,
+        agreeableness: nextRand() * 100, neuroticism: nextRand() * 100, honestyHumility: nextRand() * 100,
+      },
+      jung: { EI: nextRand() * 100, SN: nextRand() * 100, TF: nextRand() * 100, JP: nextRand() * 100 },
+      astrologyElements: {
+        fogo: nextRand() * 10, terra: nextRand() * 10, ar: nextRand() * 10, água: nextRand() * 10,
+      },
+      astrologyPolarities: { diurno: nextRand() * 15, noturno: nextRand() * 15 },
+      numerologyNumbers: [1 + Math.floor(nextRand() * 9)],
+    };
+    const axes = generateOracleAxes(inputs);
+    realmCounts[axes.dominantRealm] = (realmCounts[axes.dominantRealm] ?? 0) + 1;
+  }
+  const maxShare = Math.max(...Object.values(realmCounts)) / N;
+  assert.ok(maxShare < 0.4, `a single realm won ${Math.round(maxShare * 100)}% of profiles: ${JSON.stringify(realmCounts)}`);
+});
