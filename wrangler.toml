@@ -1,0 +1,8 @@
+name = "teste-personalidade"
+compatibility_date = "2024-03-20"
+
+[build]
+command = "npm run build"
+
+[assets]
+directory = "./out"
