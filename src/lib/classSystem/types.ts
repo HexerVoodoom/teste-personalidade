@@ -1,39 +1,45 @@
 /**
- * Vocabulary mirrored from `class-system/src/registry/*.ts` (elementos,
- * escolas, recursos, talentos, criaturas) — read-only reference data copied
- * into this project so a character sheet can be built without a runtime
- * dependency on that repo. IDs match exactly so a `Ficha` produced here is a
- * valid `Personagem` there.
+ * Vocabulário do class-system — **reexportado do repositório real**, não mais
+ * espelhado aqui.
+ *
+ * Este arquivo já foi uma cópia à mão ("read-only reference data copied into
+ * this project"). A cópia derivou: o registro real tem 11 profissões contra as
+ * 6 daqui, 111 linhas de criaturas contra 52, e ganhou 3.215 elementos e uma
+ * camada de consulta que este projeto nunca viu. Cópia de dados é a mesma
+ * armadilha da regra copiada — diverge sem dar erro.
+ *
+ * A dependência é `github:HexerVoodoom/Class-System` (repositório PÚBLICO), em
+ * código TypeScript sem build: o Next transpila via `transpilePackages`.
+ * Atualizar = `npm update class-system`, e o lockfile fixa o commit para o
+ * build ser reprodutível.
+ *
+ * O que continua sendo DESTE projeto está no fim do arquivo: `Ficha`,
+ * `StarterTalentoId` e os orçamentos por estágio são convenção do protótipo,
+ * não regra do class-system.
  */
 
-export type ElementoBaseId =
-  | "fogo" | "agua" | "terra" | "ar"
-  | "eletricidade" | "arcano" | "sombra" | "luz"
-  | "vileza" | "morte" | "vida" | "vigor"
-  | "marcial" | "tempo" | "som" | "gravidade" | "espaco";
+export type {
+  ElementoBaseId, ElementoId, ElementoDef,
+  EscolaId, RecursoId,
+  ProfissaoId, ProfissaoDef, CategoriaItem,
+  FamiliaCriatura, CriaturaDef,
+} from 'class-system';
+
+export {
+  ELEMENTOS, ELEMENTOS_PRIMAIS, elementosBase, elementosDerivados,
+  ESCOLAS, RECURSOS, PROFISSOES, CRIATURAS, FAMILIAS, TALENTOS,
+} from 'class-system';
+
+import type { ElementoBaseId, EscolaId, ProfissaoId, RecursoId } from 'class-system';
 
 export const ELEMENTO_BASE_ORDER: ElementoBaseId[] = [
   "fogo", "agua", "terra", "ar", "eletricidade", "arcano", "sombra", "luz",
   "vileza", "morte", "vida", "vigor", "marcial", "tempo", "som", "gravidade", "espaco",
 ];
 
-export type EscolaId = "combate_fisico" | "longo_alcance" | "evocacao" | "conjuracao" | "benca" | "maldicao";
-
 export const ESCOLA_ORDER: EscolaId[] = [
   "combate_fisico", "longo_alcance", "evocacao", "conjuracao", "benca", "maldicao",
 ];
-
-export type RecursoId = "mana" | "fe" | "furia" | "soullink" | "ressonancia";
-
-export type ProfissaoId = "ferreiro" | "tecelao" | "artesao" | "joalheiro" | "alquimista" | "curtidor";
-
-export interface ProfissaoDef {
-  id: ProfissaoId;
-  nome: string;
-  descricao: string;
-  fatoresElementos: Partial<Record<ElementoBaseId, number>>;
-  fatoresEscolas?: Partial<Record<EscolaId, number>>;
-}
 
 /**
  * Talentos with no prerequisite (`requisito` unset in `talentos.ts`) — the
@@ -43,20 +49,6 @@ export interface ProfissaoDef {
 export type StarterTalentoId =
   | "area_ampliada" | "conjuracao_rapida" | "alcance_estendido" | "canalizacao_profunda"
   | "economia_de_recurso" | "persistencia" | "impacto_imediato" | "dano_ao_longo_do_tempo";
-
-export type FamiliaCriatura =
-  | "besta" | "ave" | "aquatica" | "ignea" | "morto_vivo"
-  | "aberracao" | "planta" | "espirito" | "construto" | "demonio" | "draconico"
-  | "gigante" | "geleia" | "humanoide";
-
-export interface CriaturaDef {
-  id: string;
-  nome: string;
-  familia: FamiliaCriatura;
-  afinidades: ElementoBaseId[];
-  poderBase: number;
-  descricao: string;
-}
 
 /** A rookie-stage `Personagem`, restricted to what a level-0 build can hold. */
 export interface Ficha {

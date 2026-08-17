@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   // static assets, same pattern besti-rio-/class-system use on Cloudflare
   // Workers, no next-on-pages/SSR adapter needed.
   output: "export",
+  // `class-system` é dependência de git em TypeScript PURO (o repo não tem
+  // build: `main` aponta direto para `src/index.ts`). Sem isto o Next não
+  // transpila o pacote e o import quebra.
+  transpilePackages: ["class-system"],
 };
 
 export default nextConfig;
